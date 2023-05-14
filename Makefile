@@ -12,31 +12,22 @@ export LD_LIBRARY_PATH
 get_compiler = $(if $(findstring guernika,$1),/opt/gcc-12.1.0/bin/gcc,gcc)
 
 # Default target
-all: dir information libclaves cliente proxy
+all: information proxy
 
 # Print output files information 
 information:
 	@echo ''
 	@echo "Output files:"
 	@echo "  - servidor"
-	@echo "  - cliente (using libclaves.so)"
 	@echo ''
 
-# Create the ./lib directory if it doesn't exist
-dir:
-	$(shell mkdir -p lib)
+# # proxy.c compilation
+# proxy: proxy.c lines.c servidor.c LinkedList.c
+# 	@$(call get_compiler, $(shell hostname)) $(LDFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o servidor
 
 # proxy.c compilation
-proxy: proxy.c lines.c servidor.c LinkedList.c
+proxy: LinkedList.c
 	@$(call get_compiler, $(shell hostname)) $(LDFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o servidor
-
-# Generate dynamic library (FPIC flag generates position independent code; -shared flag generates a shared object)
-libclaves: claves.c
-	@$(call get_compiler, $(shell hostname)) $(LDFLAGS) $(CPPFLAGS) $(LDLIBS) -fPIC -shared $^ -o ./lib/$@.so
-
-# Client compilation
-cliente: cliente.c lines.c
-	@$(call get_compiler, $(shell hostname)) $(CPPFLAGS) $(LDLIBS) $^ -o $@ -L./lib -lclaves -Wl,-rpath=./lib
 
 # Clean all files
 clean:

@@ -8,362 +8,510 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <locale.h>
+#include <stdint.h>
 
 #include "LinkedList.h"
 
+#define localhost "127.0.0.1"
+#define UINT_MAX 4294967295 // Maximum value for an unsigned int
+
 /**
- * Search for an entry with the given key.
- * Returns NULL if the key is not found.
+ * @brief Search for a user with the given alias in the list.
+ * @return NULL if the alias does not exist in the list. Otherwise, return a pointer to the user entry.
  */
-Entry *search(LinkedList *list, int key)
-{
-  Entry *current = list->head;
-  while (current != NULL)
-  {
-    if (current->key == key)
-    {
-      return current;
+UserEntry *search(UserList *list, char *alias) {
+  UserEntry *current = list->head;
+    while (current != NULL) {
+        if (strcmp(current->alias, alias) == 0) {
+            return current;
+        }
+        current = current->next;
     }
-    current = current->next;
-  }
-  return NULL;
+    return NULL;
 }
 
-/**
- * Create a new entry with the given key and value.
- */
-Entry *create_entry(int key, char *value1, int value2, double value3)
-{
-  Entry *entry = (Entry *)malloc(sizeof(Entry)); // Cast to Entry pointer type
-  entry->key = key;
-  strcpy(entry->value1, value1);
-  entry->value2 = value2;
-  entry->value3 = value3;
-  entry->next = NULL;
-  return entry;
-}
+uint8_t validate_ip_port(char* ip, char *port) {
+    // Validate port
+    char *end;
+    int port_int = strtol(port, &end, 10);
+    if (*end != '\0') {
+        return 1;
+    }
+    if (port_int <= 1024 || port_int > 65535) {
+        return 1;
+    }
 
-/**
- * Delete an entry from the linked list.
- */
-void delete_entry(Entry *entry)
-{
-  free(entry);
-}
+    // Validate IP
+    if (strlen(ip) > 15) {
+        return 1;
+    }
 
-void delete_list(LinkedList *list)
-{
-  free(list);
-}
+    int num[4]; // For storing the 4 octets of the IP address
+    int count;  // For checking the number of parsed elements
 
-/**
- * Delete the entire linked list.
- */
-void delete_linked_list(LinkedList *list)
-{
-  Entry *current = list->head;
-  while (current != NULL)
-  {
-    Entry *next = current->next;
-    delete_entry(current);
-    current = next;
-  }
-  delete_list(list);
-}
+    // Parse the input string into the num array, check if there are exactly 4 octets, and check if there is any extra content
+    count = sscanf(ip, "%d.%d.%d.%d", &num[0], &num[1], &num[2], &num[3]);
 
-/**
- * Create a new empty linked list.
- */
-LinkedList *create_linked_list()
-{
-  LinkedList *list = (LinkedList *)malloc(sizeof(LinkedList));
-  list->head = NULL;
-  list->size = 0;
-  return list;
-}
+    if (count != 4) {
+        return 1;
+    }
 
-/**
- * Display the linked list.
- */
-void display_list(LinkedList *list)
-{
-  printf("\n------------ Linked List ------------\n");
+    for (int i = 0; i < 4; i++) {
+        // Check if each number is within the valid range
+        if (num[i] < 0 || num[i] > 255) {
+            return 1;
+        }
+    }
 
-  int iter = 0;
-  Entry *current = list->head;
 
-  while (current != NULL)
-  {
-    printf("\nComponents of the entry %d (%p): [", iter, current);
-    printf("key: %d, ", current->key);
-    printf("val1: %s, ", current->value1);
-    printf("val2: %d, ", current->value2);
-    printf("val3: %f]\n", current->value3);
-    current = current->next;
-    iter++;
-  }
-  printf("\nTotal size: %d\n", list->size);
-  printf("-------------------------------------\n");
-}
-
-/**
- * Check if an entry with the given key exists.
- * Return 1 if the key exists.
- * Return 0 if the key does not exist.
- */
-int exist(LinkedList *list, int key)
-{
-  Entry *entry = search(list, key);
-  if (entry == NULL)
-  {
     return 0;
-  }
-  return 1;
-}
-
-/*
- * Program specfic functions:
- * - set_value
- * - get_value
- * - modify_value
- * - delete_key
- * - exist (defined above)
- * - copy_key
- */
-
-int init(LinkedList *list)
-{
-  printf("\nInitializing the linked list...\n");
-  Entry *current = list->head;
-  while (current != NULL)
-  {
-    Entry *next = current->next;
-    delete_entry(current);
-    current = next;
-  }
-  list->head = NULL; // Update the head of the list to NULL as it is empty now
-  list->size = 0;    // Update the size of the list
-  return 0;
 }
 
 /**
- * Insert a new entry into the linked list. The entry is inserted sorted by key.
- * Returns 0 if the insertion was successful.
- * Returns -1 if the insertion failed.
+ * @brief Create a new user in the list with the given parameters.
+ * 1. Validate the parameters (ip and port)
+ * 2. Search for the user with the given alias in the list. If it exists, return 1.
+ * 3. Create a new user entry with the given parameters.
+ * 4. Add the user entry to the list.
+ * @return 0 -> Success, 1 -> User already exists, 2 -> Error
  */
+uint8_t register_user(UserList *list, char *ip, char *port, char *name, char *alias, char *birth) {
+    // Validate ip and port
+    if (validate_ip_port(ip, port)) {
+        return 2;
+    }
 
-int set_value(LinkedList *list, int key, char *value1, int value2, double value3)
-{
-  if (exist(list, key) == 1)
-  {
-    perror("\nThe provided key already exists");
-    return -1;
-  }
+    // Check if user already exists
+    UserEntry *existing = search(list, alias);
+    if (existing != NULL) {
+        return 1;
+    }
 
-  Entry *entry = create_entry(key, value1, value2, value3);
+    // Create a new user entry
+    UserEntry *new_user = (UserEntry *)malloc(sizeof(UserEntry));
+    if (new_user == NULL) {
+        return 2;
+    }
 
-  // If the list is empty, insert the entry at the head.
-  if (list->head == NULL)
-  {
-    list->head = entry;
+    strncpy(new_user->ip, ip, 16);
+    strncpy(new_user->port, port, 6);
+    strncpy(new_user->name, name, 256);
+    strncpy(new_user->alias, alias, 256);
+    strncpy(new_user->birth, birth, 11);
+    new_user->messageId = 0;                                // Initial message ID is 0
+    new_user->status = 0;                                   // Initial status is disconnected (0)
+    new_user->pendingMessages = create_message_list();      // Create a new list of pending messages
+    new_user->next = NULL;                                  // User is at the end of the list, so next is NULL
+
+    // Add the user entry to the list
+    if (list->head == NULL) {
+        list->head = new_user;
+    } else {
+        UserEntry *current = list->head;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = new_user;
+    }
+
     list->size++;
     return 0;
-  }
-
-  // If the list is not empty, insert the entry in the correct position (sorted by key).
-  Entry *previous = NULL;
-  Entry *current = list->head;
-  // While the current entry is not NULL and the key of the current entry is less than the key of the new entry
-  while (current != NULL && current->key < key)
-  {
-    previous = current;
-    current = current->next;
-  }
-  // If the previous entry is NULL, means that the current entry is the head of the list.
-  if (previous == NULL)
-  {
-    entry->next = current;
-    list->head = entry;
-  }
-  // If the previous entry is not NULL, means that the current entry is not the head of the list.
-  else
-  {
-    entry->next = current;
-    previous->next = entry;
-  }
-  list->size++;
-  return 0;
 }
 
 /**
- * Get the value of an entry with the given key.
- * Return -1 in case the key is not found.
+ * @brief Delete a user from the list with the given alias.
+ * 1. Search for the user with the given alias in the list. If does not exist, return 1.
+ * 2. Delete all the pending messages of the user
+ * 3. Delete the pointer to the pendingMessages list.
+ * 4. Delete the user from the list.
+ * @return 0 -> Success, 1 -> User not found, 2 -> Error
  */
-int get_value(LinkedList *list, int key, char *value1, int *value2, double *value3)
-{
-  Entry *entry = search(list, key);
+uint8_t unregister_user(UserList *list, char *alias) {
+    UserEntry *previous = NULL;
+    UserEntry *current = list->head;
 
-  if (entry == NULL)
-  {
-    perror("\nThe provided key does not exist");
-    return -1;
-  }
+    while (current != NULL) {
+        if (strcmp(current->alias, alias) == 0) {
+            // Delete all pending messages
+            delete_pending_message_list(current->pendingMessages);
 
-  // Comprobamos que los punteros de value1, value2 y value3 no son NULL
-  if (value1 == NULL || value2 == NULL || value3 == NULL)
-  {
-    perror("\nOne or more of the value pointers is NULL!");
-    return -1;
-  }
+            // Delete the user from the list
+            if (previous == NULL) {
+                list->head = current->next;
+            } else {
+                previous->next = current->next;
+            }
 
-  // Si la key existe, copiamos los valores en los punteros de value1, value2 y value3
-
-  strcpy(value1, entry->value1);
-  *value2 = entry->value2;
-  *value3 = entry->value3;
-
-  return 0;
-}
-
-/**
- * Modify the value of an entry with the given key.
- * Return -1 in case the key is not found.
- */
-int modify_value(LinkedList *list, int key, char *value1, int value2, double value3)
-{
-  Entry *entry = search(list, key);
-  if (entry == NULL)
-  {
-    perror("\nThe provided key does not exist");
-    return -1;
-  }
-  strcpy(entry->value1, value1);
-  entry->value2 = value2;
-  entry->value3 = value3;
-  return 0;
-}
-
-/**
- * Delete an entry with the given key.
- * Return -1 in case the key is not found.
- */
-int delete_key(LinkedList *list, int key)
-{
-  Entry *entry = search(list, key);
-  if (entry == NULL)
-  {
-    perror("\nThe provided key does not exist");
-    return -1;
-  }
-  // If the entry is the head of the list, delete it.
-  if (entry == list->head)
-  {
-    list->head = entry->next;
-    delete_entry(entry);
-    list->size--;
-    return 0;
-  }
-  // If the entry is not the head of the list, delete it.
-  Entry *previous = list->head;
-  Entry *current = list->head->next;
-  while (current != NULL)
-  {
-    if (current == entry)
-    {
-      previous->next = current->next;
-      delete_entry(current);
-      list->size--;
-      return 0;
+            list->size--;
+            delete_user_entry(current);
+            return 0;
+        }
+        previous = current;
+        current = current->next;
     }
-    previous = current;
-    current = current->next;
-  }
-  // If the entry is not found, return -1.
-  return -1;
+
+    return 1;
 }
 
-// /**
-//   * Copy the value of an entry with the given key.
-//   * Return -1 in case the key is not found.
-//   */
-int copy_key(LinkedList *list, int key1, int key2)
+/**
+ * @brief Connect a user with the given alias.
+ * 1. Search for the user with the given alias in the list. If does not exist, return 1.
+ * 2. If the user is already connected, return 2.
+ * 3. If the user is not connected and exists, set the status to 1 (connected).
+ * 4. Otherwise, return 3.
+ * @return 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
+ */
+uint8_t connect_user(UserList *list, char* ip, char* port, char* alias) {
+    UserEntry *user = search(list, alias);
+    if (user == NULL) {
+        return 1;
+    }
+    if (user->status == 1) {
+        return 2;
+    }
+    strncpy(user->ip, ip, 16);              // Update IP
+    strncpy(user->port, port, 6);           // Update port
+    user->status = 1;                       // Set status to connected
+    user->messageId = 0;                    // Initial message ID is 0 (reset to 0 when connecting)
+    return 0;
+}
+
+/**
+ * @brief Disconnect a user with the given alias.
+ * 1. Search for the user with the given alias in the list. If does not exist, return 1.
+ * 2. If the user is not connected, return 2.
+ * 3. If the user is connected and exists, set the status to 0 (disconnected).
+ * 4. Otherwise, return 3.
+ * @return 0 -> Success, 1 -> User not found, 2 -> User already disconnected, 3 -> Error
+ */
+uint8_t disconnect_user(UserList *list, char* ip, char *alias) {
+    UserEntry *user = search(list, alias);
+    if (user == NULL) {
+        return 1;
+    }
+    if (user->status == 0) {
+        return 2;
+    }
+    if (strcmp(user->ip, ip) != 0) {
+        return 3;
+    }
+    user->status = 0;
+    return 0;
+}
+
+/**
+ * @brief Search for all connected users in the list.
+ * 1. Search for the user with the given alias in the list. If does not exist, return 2.
+ * 2. If user is not connected, return 1.
+ * 3. If user is connected, return 0 and the list of connected users with the total number of connected users.
+ * @return 0 -> Success, 1 -> User not connected, 2 -> User not found, 3 -> Error
+ */
+ConnectedUsers connected_users(UserList *list, char *alias) {
+    UserEntry *user = search(list, alias);
+    ConnectedUsers result;
+    result.size = 0;
+    result.error_code = 0;
+
+    if (user == NULL) {
+        result.error_code = 2;
+        return result;
+    }
+    if (user->status == 0) {
+        result.error_code = 1;
+        return result;
+    }
+
+    UserEntry *current = list->head;
+    while (current != NULL) {
+        if (current->status == 1) {
+            result.alias[result.size] = current->alias;
+            result.size++;
+        }
+        current = current->next;
+    }
+    return result;
+}
+
+/**
+ * @brief Send a message from a user to another user.
+ * 1. Validate the message length.
+ * 2. Search for the source user in the list. If it does not exist, return 2.
+ * 3. If the source user is not connected, return 3.
+ * 4. Search for the destination user in the list. If it does not exist, return 1.
+ * 5. Obtain the last message ID of the source user and increment it by 1 (taking into account the wrap-around to 0).
+ * 6.a. If the destination user is connected, send the message to the destination user.
+ * 6.b. If the destination user is not connected, store the message in the pending messages list of the destination user and local variable <stored> to 1.
+ */
+uint8_t send_message(UserList *list, char *sourceAlias, char *destAlias, char *message) {
+    if (strlen(message) > 255) {
+        return 2;
+    }
+
+    UserEntry *source_user = search(list, sourceAlias);
+    if (source_user == NULL) {
+        return 2;
+    }
+    if (source_user->status == 0) {
+        return 2;
+    }
+
+    UserEntry *dest_user = search(list, destAlias);
+    if (dest_user == NULL) {
+        return 1;
+    }
+
+    if (dest_user->status == 1) {
+        // Send the message to the destination user
+        // Implement the actual sending function depending on the communication protocol
+    } else {
+        add_pending_message(dest_user, sourceAlias, source_user->messageId, message);
+    }
+
+    source_user->messageId = (source_user->messageId + 1) % UINT_MAX;
+
+    return 0;
+}
+
+/**
+ * @brief Initialise service and destroys all stored users and pending messages of those users.
+ * @return 0 if the service was initialised correctly, -1 an error occurred during communication.
+ */
+uint8_t init(UserList *list) {
+    if (list == NULL) {
+        return -1;
+    }
+    delete_user_list(list);
+    list->head = NULL;
+    list->size = 0;
+    return 0;
+}
+
+/**
+ * @brief Delete a user entry.
+ * @return 0 -> Success, 1 -> Error
+ */
+uint8_t delete_user_entry(UserEntry *user) {
+    if (user == NULL) {
+        return 1;
+    }
+    // delete all the pending messages of the user
+    delete_pending_message_list(user->pendingMessages);
+    free(user->pendingMessages);
+    free(user);
+    return 0;
+}
+
+/**
+ * @brief Delete the user list.
+ * @return 0 -> Success, 1 -> Error
+ */
+uint8_t delete_user_list(UserList *list) {
+    UserEntry *current = list->head;
+    while (current != NULL) {
+        UserEntry *next = current->next;
+        delete_user_entry(current);
+        current = next;
+    }
+    list->head = NULL;
+    list->size = 0;
+    return 0;
+}
+
+/**
+ * @brief Delete a message entry.
+ * @return 0 -> Success, 1 -> Error
+ */
+uint8_t delete_message_entry(MessageEntry* message) {
+    if (message == NULL) {
+        return 1;
+    }
+    free(message);
+    return 0;
+}
+
+/**
+ * @brief Delete all pending messages of the user with the given alias.
+ * 1. Search for the user with the given alias in the list. If it does not exist, return 1;
+ * 2. Delete all the pending messages of the user.
+ * @return 0 -> Success, 1 -> User not found, 2 -> Error
+ */
+uint8_t delete_pending_messages(UserList *list, char *alias) {
+    UserEntry *user = search(list, alias);
+    if (user == NULL) {
+        return 1;
+    }
+    delete_pending_message_list(user->pendingMessages);
+    return 0;
+}
+
+/**
+ * @brief Delete the message list.
+ */
+void delete_pending_message_list(MessageList *list) {
+    MessageEntry *current = list->head;
+    while (current != NULL) {
+        MessageEntry *next = current->next;
+        delete_message_entry(current);
+        current = next;
+    }
+    list->head = NULL;
+    list->size = 0;
+}
+
+/**
+ * @brief Create a new message in the list with the given parameters.
+ * 1. Search for the destination user in the list. If it does not exist, return NULL.
+ * 2. Create a new message entry with the given parameters.
+ * 3. Add the message entry to the list of pending messages of the destination user.
+ * @return 0 -> Success, 1 -> Destination user not found, 2 -> Error
+ */
+uint8_t add_pending_message(UserEntry *dest_user, char *sourceAlias, unsigned int msgId, char *message) {
+    MessageEntry *new_message = (MessageEntry *)malloc(sizeof(MessageEntry));
+    if (new_message == NULL) {
+        return 1;
+    }
+
+    new_message->num = dest_user->pendingMessages->size;
+    new_message->msgId = msgId;
+    strncpy(new_message->sourceAlias, sourceAlias, 255);
+    new_message->sourceAlias[255] = '\0';
+    strncpy(new_message->message, message, 255);
+    new_message->message[255] = '\0';
+    new_message->next = NULL;
+
+    if (dest_user->pendingMessages->head == NULL) {
+        dest_user->pendingMessages->head = new_message;
+    } else {
+        MessageEntry *current = dest_user->pendingMessages->head;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = new_message;
+    }
+
+    dest_user->pendingMessages->size++;
+    return 0;
+}
+
+/**
+ * @brief Display the list of users.
+ */
+void display_users(UserList *list) {
+    setlocale(LC_ALL, "");              // Enable Unicode support in printf
+    UserEntry *current = list->head;
+    while (current != NULL) {
+        printf("👤 Alias: %s, 🌐 IP: %s, 🚪 Port: %s, 📛 Name: %s, 🎂 Birth: %s, 🔌 Status: %s\n",
+               current->alias, current->ip, current->port, current->name, current->birth,
+               current->status ? "Connected" : "Disconnected");
+        current = current->next;
+    }
+}
+/**
+ * @brief Display the list of pending messages of the user with the given alias.
+ * 1. Search for the user with the given alias in the list. If it does not exist, return 1;
+ * 2. Display all the pending messages of the user.
+ * @return 0 -> Success, 1 -> User not found, 2 -> Error
+ */
+uint8_t display_pending_messages(UserList *list, char *alias) {
+    setlocale(LC_ALL, "");              // Enable Unicode support in printf
+    UserEntry *user = search(list, alias);
+    if (user == NULL) {
+        return 1;
+    }
+
+    MessageEntry *current = user->pendingMessages->head;
+    while (current != NULL) {
+        printf("✉️ Message %u from %s: %s\n", current->msgId, current->sourceAlias, current->message);
+        current = current->next;
+    }
+    return 0;
+}
+
+/**
+ * @brief Create a new linked list of users.
+ */
+UserList *create_user_list() {
+    UserList *list = (UserList *)malloc(sizeof(UserList));
+    if (list == NULL) {
+        return NULL;
+    }
+    list->head = NULL;
+    list->size = 0;
+    return list;
+}
+
+/**
+ * @brief Create a new linked list of pending messages.
+ */
+MessageList *create_message_list() {
+    MessageList *list = (MessageList *)malloc(sizeof(MessageList));
+    if (list == NULL) {
+        return NULL;
+    }
+    list->head = NULL;
+    list->size = 0;
+    return list;
+}
+
+// void print_register_result(uint8_t register_result) {
+//     switch (register_result) {
+//         case 0:
+//             printf("OKAY: User registered\n");
+//             break;
+//         case 1:
+//             printf("ERROR: User already exists\n");
+//             break;
+//         case 2:
+//             printf("ERROR: Error registering user\n");
+//             break;
+//     }
+// }
+
+void print_connected_users(ConnectedUsers connected_users_result) {
+    printf("\nConnected users (size: %d, error code: %d):\n", connected_users_result.size, connected_users_result.error_code);
+    for (unsigned int i = 0; i < connected_users_result.size; i++) {
+        printf("\t👤 Alias: %s\n", connected_users_result.alias[i]);
+    }
+    printf("\n");
+}
+
+int main(void)
 {
-  Entry *entry1 = search(list, key1);
-  if (entry1 == NULL)
-  {
-    perror("\nThe provided key to copy to already exists");
-    return -1;
-  }
+    UserList *user_list = create_user_list();
+    init(user_list);
+    register_user(user_list, "127.0.0.1", "3000", "Carlos Iborra", "carlitos", "01/01/2000");
+    register_user(user_list, "127.0.0.1", "3000", "Rafael Constasti", "el veneco", "01/01/2002");
+    connect_user(user_list, "127.0.0.1", "3000", "el veneco");
+    // print_register_result(register_result);
+    unregister_user(user_list, "el veneco");
+    register_user(user_list, "127.0.0.1", "3000", "Rafael Constasti", "el veneco", "01/01/2002");
 
-  // If key2 exists, modify its value.
-  // If key2 does not exist, create a new entry with key2 and the value of key1.
-  Entry *entry2 = search(list, key2);
-  if (entry2 == NULL)
-  {
-    set_value(list, key2, entry1->value1, entry1->value2, entry1->value3);
-  }
-  else
-  {
-    modify_value(list, key2, entry1->value1, entry1->value2, entry1->value3);
-  }
+    connect_user(user_list, "127.0.0.1", "3000", "carlitos");
+    disconnect_user(user_list, "127.0.0.1", "carlitos");
+    connect_user(user_list, "127.0.0.1", "3000", "carlitos");
+    // printf("connect user value: %d", connect_user(user_list, "127.0.0.1", "3000", "carlitos"));
 
-  return 0;
+    register_user(user_list, "127.0.0.1", "3000", "Dibox", "diboxo1", "01/06/2002");
+    connect_user(user_list, "127.0.0.1", "3000", "diboxo1");
+
+    ConnectedUsers connected_users_result = connected_users(user_list, "carlitos");
+    print_connected_users(connected_users_result);
+
+    printf("Users after registering carlitos:\n");
+    display_users(user_list);
+
+    printf("Pending messages of el veneco:\n");
+    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa cruck");
+    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa maquina");
+    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa fiera");
+    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa mastodonte");
+    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa campeon");
+    display_pending_messages(user_list, "el veneco");
+
+
+
+    // delete linked list
+    delete_user_list(user_list);
+    free(user_list);
 }
-
-// int main(void)
-// {
-//   LinkedList *list = create_linked_list();
-//   set_value(list, 1, "Hola", 1, 1.0);
-//   set_value(list, 2, "Hola", 2, 2.0);
-//   set_value(list, 5, "Hola", 3, 3.0);
-//   set_value(list, 6, "No", 4, 9.0);
-//   set_value(list, 7, "Hola", 3, 3.0);
-//   set_value(list, 1, "Hola", 4, 4.0);
-//   set_value(list, 3, "Hola", 5, 5.0);
-//   modify_value(list, 1, "Hola", 6, 6.0);
-//   display_list(list);
-//   delete_key(list, 1);
-//   delete_key(list, 7);
-//   display_list(list);
-//   int e0 = exist(list, 1);
-//   int e1 = exist(list, 2);
-//   printf("¿Existe la key 1? %d, ¿Existe la key 2? %d", e0, e1);
-//   copy_key(list, 2, 1);
-//   copy_key(list, 5, 6);
-//   display_list(list);
-//   delete_linked_list(list);
-
-//   test_get_value();
-// }
-
-// void test_get_value() {
-//   // Create a new empty linked list
-//   LinkedList *list = create_linked_list();
-
-//   // Add some entries to the linked list
-//   set_value(list, 1, "value1", 2, 3.14);
-//   set_value(list, 2, "value2", 4, 6.28);
-//   set_value(list, 3, "value3", 6, 9.42);
-
-//   // Test getting an existing value
-//   char value1[256];
-//   int value2;
-//   double value3;
-//   int result = get_value(list, 2, value1, &value2, &value3);
-//   if (result == 0) {
-//     printf("OKAY: got value: key=2, value1=%s, value2=%d, value3=%f\n", value1, value2, value3);
-//   } else {
-//     printf("ERROR: Error getting value for key=2\n");
-//   }
-
-//   // Test getting a non-existent value
-//   result = get_value(list, 4, value1, &value2, &value3);
-//   if (result == 0) {
-//     printf("ERROR: got value for non-existent key\n");
-//   } else {
-//     printf("OKAY: not getting non-existent value\n");
-//   }
-
-//   // Free the linked list
-//   delete_linked_list(list);
-// }
