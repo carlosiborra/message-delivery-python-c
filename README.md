@@ -14,5 +14,10 @@
 
   > `rm /dev/mqueue/mq_client_0`
 
-Ejecutar app. python:
-> `python ./client.py -s localhost -p 3000`
+# Comandos de ejecución
+
+## Ejecutar app. python:
+> `python3 ./client.py -s localhost -p 8888`
+
+## Ejecutar app. servidor:
+> `make proxy && ./servidor -p 8888`

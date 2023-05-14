@@ -61,7 +61,6 @@ int list_init()
 
 /**
  * @brief Create a new user in the list with the given parameters.
- * @param list UserList
  * @param ip char*
  * @param port char*
  * @param name char*
@@ -87,7 +86,6 @@ uint8_t list_register_user(char *ip, char *port, char *name, char *alias, char *
 
 /**
  * @brief Delete a user from the list with the given alias.
- * @param list UserList
  * @param alias char*
  * @return 0 -> Success, 1 -> User not found, 2 -> Error
  */
@@ -109,7 +107,6 @@ uint8_t list_unregister_user(char *alias) {
 
 /**
  * @brief Connect a user with the given alias.
- * @param list UserList
  * @param ip char*
  * @param port char*
  * @param alias char*
@@ -134,7 +131,6 @@ uint8_t list_connect_user(char *ip, char *port, char *alias) {
 
 /**
  * @brief Disconnect a user with the given alias.
- * @param list UserList
  * @param ip char*
  * @param alias char*
  * @return 0 -> Success, 1 -> User not found, 2 -> User already disconnected, 3 -> Error
@@ -157,7 +153,6 @@ uint8_t list_disconnect_user(char *ip, char *alias) {
 
 /**
  * @brief Search for all connected users in the list.
- * @param list UserList
  * @param alias char*
  * @return ConnectedUsers struct with error_code: 0 -> Success, 1 -> User not connected, 2 -> User not found, 3 -> Error
  */
@@ -212,7 +207,6 @@ ConnectedUsers list_connected_users(char *alias) {
 
 /**
  * @brief Send a message from a user to another user.
- * @param list UserList
  * @param sourceAlias char*
  * @param destAlias char*
  * @param message char*

@@ -107,17 +107,16 @@ void send_int(int sd, int int_value)
     }
 }
 
-void send_string(int sd, char* string)
+void send_string(int sd, char *string)
 {
-	int len = strlen(string) + 1;
+    int len = strlen(string) + 1;
 
-	if ((sendMessage(sd, string, len)) == -1)
-	{
-		printf("Error sending string to the server\n");
-		exit(1);
-	}
+    if ((sendMessage(sd, string, len)) == -1)
+    {
+        printf("Error sending string to the server\n");
+        exit(1);
+    }
 }
-
 
 // Parameters get_parameters(int client_sd, int operation_code) {
 //     int num_parameters = OPERATION_PARAMS[operation_code];
@@ -147,17 +146,21 @@ void send_string(int sd, char* string)
 //     return parameters;
 // }
 
-int8_t get_operation_code(char* operation_code_str) {
+int8_t get_operation_code(char *operation_code_str)
+{
     // * Get the operation code (int)
     int8_t operation_code_int = -1;
-    for (int i = 0; i < 7; i++) {
-        if (strcmp(operation_code_str, OPERATION_NAMES[i]) == 0) {
+    for (int i = 0; i < 7; i++)
+    {
+        if (strcmp(operation_code_str, OPERATION_NAMES[i]) == 0)
+        {
             operation_code_int = i;
             break;
         }
     }
 
-    if (operation_code_int == -1) {
+    if (operation_code_int == -1)
+    {
         printf("Error: Invalid operation code\n");
         exit(1);
     }
@@ -166,11 +169,23 @@ int8_t get_operation_code(char* operation_code_str) {
 }
 
 /**
+ * @brief Send the response to the client
+ * @param error_code
+ * @param client_sd (socket descriptor of the client)
+ */
+void send_string_response(uint8_t error_code, int client_sd)
+{
+    char error_code_str[4];
+    sprintf(error_code_str, "%hhu", error_code);
+    send_string(client_sd, error_code_str);
+}
+
+/**
  * @brief Deal with the request
  *
  * @param client_request
  */
-void deal_with_request(Request* client_request)
+void deal_with_request(Request *client_request)
 {
     // Parameters parameters = {0};
 
@@ -191,7 +206,6 @@ void deal_with_request(Request* client_request)
     strcpy(client_IP, inet_ntoa(client_addr.sin_addr));
     client_port = ntohs(client_addr.sin_port);
 
-
     // print the client IP and port
     printf("IP: %s, Port: %d\n", client_IP, client_port);
 
@@ -211,24 +225,41 @@ void deal_with_request(Request* client_request)
     uint8_t error_code;
     switch (operation_code_int)
     {
-        case REGISTER:
-            char name[256];                 // Name of the user: 255 characters + '\0'
-            char alias[256];                // Alias of the user: 255 characters + '\0' <- IDENTIFIER
-            char birth[11];                 // Birth of the user: "DD/MM/AAAA" + '\0'
+    case REGISTER:
 
-            // * Read the parameters
-            strcpy(name, read_string(client_sd));
-            strcpy(alias, read_string(client_sd));
-            strcpy(birth, read_string(client_sd));
+        char name[256];  // Name of the user: 255 characters + '\0'
+        char alias[256]; // Alias of the user: 255 characters + '\0' <- IDENTIFIER
+        char birth[11];  // Birth of the user: "DD/MM/AAAA" + '\0'
 
-            // * Register the user
-            error_code = list_register_user(client_IP, client_port_str, name, alias, birth);
-            list_display_user_list();
+        // * Read the parameters
+        strcpy(name, read_string(client_sd));
+        strcpy(alias, read_string(client_sd));
+        strcpy(birth, read_string(client_sd));
 
-            // * Send the error code to the client
-            send_int(client_sd, error_code);
+        // * Register the user
+        error_code = list_register_user(client_IP, client_port_str, name, alias, birth);
+        list_display_user_list();
 
-            break;
+        // * Send the error code to the client
+        send_string_response(error_code, client_sd);
+
+        break;
+
+    case UNREGISTER:
+
+        char alias_unregister[256]; // Alias of the user: 255 characters + '\0' <- IDENTIFIER
+
+        // * Read the parameters
+        strcpy(alias_unregister, read_string(client_sd));
+        
+        // * Unregister the user
+        error_code = list_unregister_user(alias_unregister);
+        list_display_user_list();
+
+        // * Send the error code to the client
+        send_string_response(error_code, client_sd);
+
+        break;
     }
 
     // close the socket

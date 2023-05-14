@@ -59,15 +59,7 @@ class client :
 
             # Receive the response from the server
             response = sock.recv(1).decode()
-
-            # Receive the response from the server
-            # message = ''
-            # while True:
-            #     response = sock.recv(1)
-            #     if (response == b'\0'):
-            #         break
-            #     message += response.decode()        
-
+            
             print(f"Response: {response}")
 
             if (response == "0"):
@@ -91,9 +83,34 @@ class client :
     # 	 * @return ERROR if another error occurred
     @staticmethod
     def  unregister(user, window):
-        window['_SERVER_'].print("s> UNREGISTER OK")
-        #  Write your code here
-        return client.RC.ERROR
+        try: 
+            sock = client.create_socket_and_connect()
+
+            # Indicate the server that we want to register
+            sock.sendall("UNREGISTER".encode())
+            sock.sendall(b'\0')
+
+            # Sending the rest of the data: alias
+            sock.sendall(client._alias.encode())
+            sock.sendall(b'\0')
+
+            # Receive the response from the server
+            response = sock.recv(1).decode()
+            
+            print(f"Response: {response}")
+
+            if (response == "0"):
+                window['_SERVER_'].print("s> UNREGISTER OK")
+                return client.RC.OK
+            elif (response == "1"):
+                window['_SERVER_'].print("s> USERNAME DOES NOT EXIST")
+                return client.RC.USER_ERROR
+            else:
+                window['_SERVER_'].print("s> UNREGISTER FAIL")
+                return client.RC.ERROR
+        except Exception as _:
+            window['_SERVER_'].print("s> UNREGISTER FAIL")
+            return client.RC.ERROR
 
 
     # *
