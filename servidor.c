@@ -69,7 +69,7 @@ int list_init()
  * @param birth char*
  * @return 0 -> Success, 1 -> User already exists, 2 -> Error
  */
-uint8_t list_register_user(UserList *list, char *ip, char *port, char *name, char *alias, char *birth) {
+uint8_t list_register_user(char *ip, char *port, char *name, char *alias, char *birth) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -77,7 +77,7 @@ uint8_t list_register_user(UserList *list, char *ip, char *port, char *name, cha
     sem_wait(&writer_sem);
 
     // Create user in the linked list
-    int error_code = register_user(list, ip, port, name, alias, birth);
+    int error_code = register_user(user_list, ip, port, name, alias, birth);
 
     // Writer releases the write semaphore
     sem_post(&writer_sem);
@@ -91,7 +91,7 @@ uint8_t list_register_user(UserList *list, char *ip, char *port, char *name, cha
  * @param alias char*
  * @return 0 -> Success, 1 -> User not found, 2 -> Error
  */
-uint8_t list_unregister_user(UserList *list, char *alias) {
+uint8_t list_unregister_user(char *alias) {
     // Initialize the semaphore if it is not initialized
     init_sem();
      
@@ -99,8 +99,8 @@ uint8_t list_unregister_user(UserList *list, char *alias) {
     sem_wait(&writer_sem);
     
     // Delete user from the linked list
-    int error_code = unregister_user(list, alias);
-     
+    int error_code = unregister_user(user_list, alias);
+
     // Writer releases the write semaphore
     sem_post(&writer_sem);
     
@@ -115,7 +115,7 @@ uint8_t list_unregister_user(UserList *list, char *alias) {
  * @param alias char*
  * @return 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
  */
-uint8_t list_connect_user(UserList *list, char *ip, char *port, char *alias) {
+uint8_t list_connect_user(char *ip, char *port, char *alias) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -123,8 +123,8 @@ uint8_t list_connect_user(UserList *list, char *ip, char *port, char *alias) {
     sem_wait(&writer_sem);
     
     // Connect user in the linked list
-    int error_code = connect_user(list, ip, port, alias);
-    
+    int error_code = connect_user(user_list, ip, port, alias);
+
     // Writer releases the write semaphore
     sem_post(&writer_sem);
 
@@ -139,7 +139,7 @@ uint8_t list_connect_user(UserList *list, char *ip, char *port, char *alias) {
  * @param alias char*
  * @return 0 -> Success, 1 -> User not found, 2 -> User already disconnected, 3 -> Error
  */
-uint8_t list_disconnect_user(UserList *list, char *ip, char *alias) {
+uint8_t list_disconnect_user(char *ip, char *alias) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -147,8 +147,8 @@ uint8_t list_disconnect_user(UserList *list, char *ip, char *alias) {
     sem_wait(&writer_sem);
     
     // Disconnect user in the linked list
-    int error_code = disconnect_user(list, ip, alias);
-    
+    int error_code = disconnect_user(user_list, ip, alias);
+
     // Writer releases the write semaphore
     sem_post(&writer_sem);
     
@@ -161,7 +161,7 @@ uint8_t list_disconnect_user(UserList *list, char *ip, char *alias) {
  * @param alias char*
  * @return ConnectedUsers struct with error_code: 0 -> Success, 1 -> User not connected, 2 -> User not found, 3 -> Error
  */
-ConnectedUsers list_connected_users(UserList *list, char *alias) {
+ConnectedUsers list_connected_users(char *alias) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -190,7 +190,7 @@ ConnectedUsers list_connected_users(UserList *list, char *alias) {
     pthread_mutex_unlock(&reader_mut);
 
     // Search for all connected users in the linked list
-    ConnectedUsers connected_users_result = connected_users(list, alias);
+    ConnectedUsers connected_users_result = connected_users(user_list, alias);
 
     // Acquire the reader mutex
     pthread_mutex_lock(&reader_mut);
@@ -218,7 +218,7 @@ ConnectedUsers list_connected_users(UserList *list, char *alias) {
  * @param message char*
  * @return 0 -> Success, 1 -> Destination user not found, 2 -> Error
  */
-uint8_t list_send_message(UserList *list, char *sourceAlias, char *destAlias, char *message) {
+uint8_t list_send_message(char *sourceAlias, char *destAlias, char *message) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -226,8 +226,8 @@ uint8_t list_send_message(UserList *list, char *sourceAlias, char *destAlias, ch
     sem_wait(&writer_sem);
     
     // Send message in the linked list
-    int error_code = send_message(list, sourceAlias, destAlias, message);
-    
+    int error_code = send_message(user_list, sourceAlias, destAlias, message);
+
     // Writer releases the write semaphore
     sem_post(&writer_sem);
     
@@ -288,32 +288,32 @@ void print_connected_users(ConnectedUsers connected_users_result) {
 // int main(void) {
 //     list_init();
 
-//     list_register_user(user_list, "127.0.0.1", "3000", "Carlos Iborra", "carlitos", "01/01/2000");
-//     list_register_user(user_list, "127.0.0.1", "3000", "Rafael Contasti", "el veneco", "01/01/2002");
-//     list_connect_user(user_list, "127.0.0.1", "3000", "el veneco");
+//     list_register_user("127.0.0.1", "3000", "Carlos Iborra", "carlitos", "01/01/2000");
+//     list_register_user("127.0.0.1", "3000", "Rafael Contasti", "el veneco", "01/01/2002");
+//     list_connect_user("127.0.0.1", "3000", "el veneco");
     
-//     list_unregister_user(user_list, "el veneco");
-//     list_register_user(user_list, "127.0.0.1", "3000", "Rafael Contasti", "el veneco", "01/01/2002"); 
+//     list_unregister_user("el veneco");
+//     list_register_user("127.0.0.1", "3000", "Rafael Contasti", "el veneco", "01/01/2002"); 
     
-//     list_connect_user(user_list, "127.0.0.1", "3000", "carlitos");
-//     list_disconnect_user(user_list, "127.0.0.1", "carlitos");
-//     list_connect_user(user_list, "127.0.0.1", "3000", "carlitos");
+//     list_connect_user("127.0.0.1", "3000", "carlitos");
+//     list_disconnect_user("127.0.0.1", "carlitos");
+//     list_connect_user("127.0.0.1", "3000", "carlitos");
 
-//     list_register_user(user_list, "127.0.0.1", "3000", "Dibox", "diboxo1", "01/06/2002");
-//     list_connect_user(user_list, "127.0.0.1", "3000", "diboxo1");
+//     list_register_user("127.0.0.1", "3000", "Dibox", "diboxo1", "01/06/2002");
+//     list_connect_user("127.0.0.1", "3000", "diboxo1");
 
-//     ConnectedUsers connected_users_result = list_connected_users(user_list, "carlitos");
+//     ConnectedUsers connected_users_result = list_connected_users("carlitos");
 //     print_connected_users(connected_users_result);
 
 //     printf("Users after registering carlitos:\n");
 //     list_display_user_list();
 
 //     printf("Pending messages of el veneco:\n");
-//     list_send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa cruck");
-//     list_send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa maquina");
-//     list_send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa fiera");
-//     list_send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa mastodonte");
-//     list_send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa campeon");
+//     list_send_message("carlitos", "el veneco", "Hola veneco, que pasa cruck");
+//     list_send_message("carlitos", "el veneco", "Hola veneco, que pasa maquina");
+//     list_send_message("carlitos", "el veneco", "Hola veneco, que pasa fiera");
+//     list_send_message("carlitos", "el veneco", "Hola veneco, que pasa mastodonte");
+//     list_send_message("carlitos", "el veneco", "Hola veneco, que pasa campeon");
 //     list_display_pending_messages_list("el veneco");
 
 //     request_delete_list();

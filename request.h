@@ -6,20 +6,19 @@
 // Enum to identify the operation to be performed
 typedef enum
 {
-    init_op = 0,
-    set_value_op = 1,
-    get_value_op = 2,
-    delete_key_op = 3,
-    modify_value_op = 4,
-    exist_op = 5,
-    copy_key_op = 6,
+    REGISTER = 0,
+    UNREGISTER = 1,
+    CONNECT = 2,
+    DISCONNECT = 3,
+    SEND = 4,
+    CONNECTEDUSERS = 5
 } OPERATION;
 
 // Array to store the names of the operations
-char* OPERATION_NAMES[7] = {"init", "set_value", "get_value", "delete_key", "modify_value", "exist", "copy_key"};
+char* OPERATION_NAMES[7] = {"REGISTER", "UNREGISTER", "CONNECT", "DISCONNECT",  "SEND", "CONNECTEDUSERS"};
 
 // Array to store the number of parameters that each operation needs
-int OPERATION_PARAMS[7] = {0, 4, 1, 1, 4, 1, 2};
+int OPERATION_PARAMS[7] = {3, 1, 1, 1, 3, 1};
 
 // Structure of the request
 typedef struct

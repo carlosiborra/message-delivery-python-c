@@ -12,14 +12,14 @@ export LD_LIBRARY_PATH
 get_compiler = $(if $(findstring guernika,$1),/opt/gcc-12.1.0/bin/gcc,gcc)
 
 # Default target
-all: information proxy
+all: proxy
 
 # Print output files information 
-information:
-	@echo ''
-	@echo "Output files:"
-	@echo "  - servidor"
-	@echo ''
+# information:
+# 	@echo ''
+# 	@echo "Output files:"
+# 	@echo "  - servidor"
+# 	@echo ''
 
 # # proxy.c compilation
 # proxy: proxy.c lines.c servidor.c LinkedList.c

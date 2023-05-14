@@ -25,6 +25,15 @@ class client :
     _date = None
 
     # ******************** METHODS *******************
+
+    # *
+    # * @return the socket to the server
+    @staticmethod
+    def create_socket_and_connect():
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((client._server, client._port))
+        return sock
+
     # *
     # * @param user - User name to register in the system
     # *
@@ -33,9 +42,46 @@ class client :
     # * @return ERROR if another error occurred
     @staticmethod
     def  register(user, window):
-        window['_SERVER_'].print("s> REGISTER OK")
-        #  Write your code here
-        return client.RC.ERROR
+        try: 
+            sock = client.create_socket_and_connect()
+
+            # Indicate the server that we want to register
+            sock.sendall("REGISTER".encode())
+            sock.sendall(b'\0')
+
+            # Sending the rest of the data: username, alias and date
+            sock.sendall(client._username.encode())
+            sock.sendall(b'\0')
+            sock.sendall(client._alias.encode())
+            sock.sendall(b'\0')
+            sock.sendall(client._date.encode())
+            sock.sendall(b'\0')
+
+            # Receive the response from the server
+            response = sock.recv(1).decode()
+
+            # Receive the response from the server
+            # message = ''
+            # while True:
+            #     response = sock.recv(1)
+            #     if (response == b'\0'):
+            #         break
+            #     message += response.decode()        
+
+            print(f"Response: {response}")
+
+            if (response == "0"):
+                window['_SERVER_'].print("s> REGISTER OK")
+                return client.RC.OK
+            elif (response == "1"):
+                window['_SERVER_'].print("s> USERNAME IN USE")
+                return client.RC.USER_ERROR
+            else:
+                window['_SERVER_'].print("s> REGISTER FAIL")
+                return client.RC.ERROR
+        except Exception as _:
+            window['_SERVER_'].print("s> REGISTER FAIL")
+            return client.RC.ERROR
 
     # *
     # 	 * @param user - User name to unregister from the system
@@ -264,7 +310,6 @@ class client :
             elif (event == 'CONNECTED USERS'):
                 window['_CLIENT_'].print("c> CONNECTEDUSERS")
                 client.connectedUsers(window)
-
 
 
             window.Refresh()

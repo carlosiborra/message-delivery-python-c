@@ -98,6 +98,15 @@ char *read_string(int sd)
     return string;
 }
 
+void send_int(int sd, int int_value)
+{
+    if (send(sd, &int_value, sizeof(int), 0) == -1)
+    {
+        printf("Error sending integer value to the server\n");
+        exit(1);
+    }
+}
+
 void send_string(int sd, char* string)
 {
 	int len = strlen(string) + 1;
@@ -138,6 +147,29 @@ void send_string(int sd, char* string)
 //     return parameters;
 // }
 
+int8_t get_operation_code(char* operation_code_str) {
+    // * Get the operation code (int)
+    int8_t operation_code_int = -1;
+    for (int i = 0; i < 7; i++) {
+        if (strcmp(operation_code_str, OPERATION_NAMES[i]) == 0) {
+            operation_code_int = i;
+            break;
+        }
+    }
+
+    if (operation_code_int == -1) {
+        printf("Error: Invalid operation code\n");
+        exit(1);
+    }
+
+    return operation_code_int;
+}
+
+/**
+ * @brief Deal with the request
+ *
+ * @param client_request
+ */
 void deal_with_request(Request* client_request)
 {
     // Parameters parameters = {0};
@@ -151,7 +183,7 @@ void deal_with_request(Request* client_request)
 
     // * Lock the mutex on the process of request copying
     pthread_mutex_lock(&mutex);
-    strcpy(client_request->operation, operation_code_copy);
+    strcpy(operation_code_copy, client_request->operation);
     client_sd = client_request->socket;
 
     // get the client IP and port
@@ -159,73 +191,45 @@ void deal_with_request(Request* client_request)
     strcpy(client_IP, inet_ntoa(client_addr.sin_addr));
     client_port = ntohs(client_addr.sin_port);
 
+
     // print the client IP and port
     printf("IP: %s, Port: %d\n", client_IP, client_port);
 
-    // printf("📥 Message Received -> Executing \"%s\" by %s:\n", OPERATION_NAMES[client_request_copy.operacion], client_request_copy.clientPID);
     busy = false;
     pthread_cond_signal(&cond);
     pthread_mutex_unlock(&mutex);
 
-    // // * Response (message)
-    // int error_code = -1;
+    // * Get the operation code (int)
+    int8_t operation_code_int = get_operation_code(operation_code_copy);
 
-    // switch (operation_code_copy)
-    // {
-    // case init_op:
-    //     error_code = list_init();
-    //     // list_display_list();
-    //     break;
+    // * Get the number of parameters
+    // int num_parameters = OPERATION_PARAMS[operation_code_int];
 
-    // case set_value_op:
-    //     parameters = get_parameters(client_sd, operation_code_copy);
-    //     error_code = list_set_value(parameters.key1, parameters.value1, parameters.value2, parameters.value3);
-    //     // list_display_list();
-    //     break;
+    char client_port_str[6];
+    sprintf(client_port_str, "%d", client_port);
 
-    // case get_value_op:
-    //     // Initialize the memory pointed by value2response and value3response to avoid garbage values
-    //     *value2response = 0;
-    //     *value3response = 0.0;
+    uint8_t error_code;
+    switch (operation_code_int)
+    {
+        case REGISTER:
+            char name[256];                 // Name of the user: 255 characters + '\0'
+            char alias[256];                // Alias of the user: 255 characters + '\0' <- IDENTIFIER
+            char birth[11];                 // Birth of the user: "DD/MM/AAAA" + '\0'
 
-    //     parameters = get_parameters(client_sd, operation_code_copy);
+            // * Read the parameters
+            strcpy(name, read_string(client_sd));
+            strcpy(alias, read_string(client_sd));
+            strcpy(birth, read_string(client_sd));
 
-    //     error_code = list_get_value(parameters.key1, value1response, value2response, value3response);
-    //     // list_display_list();
-    //     break;
+            // * Register the user
+            error_code = list_register_user(client_IP, client_port_str, name, alias, birth);
+            list_display_user_list();
 
-    // case delete_key_op:
-    //     parameters = get_parameters(client_sd, operation_code_copy);
-    //     error_code = list_delete_key(parameters.key1);
-    //     // list_display_list();
-    //     break;
+            // * Send the error code to the client
+            send_int(client_sd, error_code);
 
-    // case modify_value_op:
-    //     parameters = get_parameters(client_sd, operation_code_copy);
-    //     error_code = list_modify_value(parameters.key1, parameters.value1, parameters.value2, parameters.value3);
-    //     // list_display_list();
-    //     break;
-
-    // case exist_op:
-    //     parameters = get_parameters(client_sd, operation_code_copy);
-    //     error_code = list_exist(parameters.key1);
-    //     // list_display_list();
-    //     break;
-
-    // case copy_key_op:
-    //     parameters = get_parameters(client_sd, operation_code_copy);
-    //     error_code = list_copy_key(parameters.key1, parameters.key2);
-    //     // list_display_list();
-    //     break;
-    // }
-
-    // // * Send the error code to the client
-    // if (send(client_sd, &error_code, sizeof(int), 0) == -1)
-    // {
-    //     printf("Error sending error code to the client\n");
-    //     printf("Error code: %d\n", error_code);
-    //     exit(1);
-    // }
+            break;
+    }
 
     // close the socket
     close(client_sd);
@@ -270,14 +274,11 @@ int process_port(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     int port = process_port(argc, argv);
-    printf("Port: %d\n", port);
+    // printf("Port: %d\n", port);
     int sd = create_socket(port);
 
     // Register the signal handler
     signal(SIGINT, stopServer);
-
-    printf("\nServer live");
-    printf("\nWaiting for messages...\n\n");
 
     // If signal is received, stop the server
     signal(SIGINT, stopServer);
@@ -310,6 +311,9 @@ int main(int argc, char *argv[])
         client_request.socket = client_sd;
         strcpy(client_request.operation, read_string(client_sd));
 
+        printf("📧 Operation -> \"%s\"\n", client_request.operation);
+
+        // * Print the request
         // ! We create a thread for each request and execute the function deal_with_request
         pthread_t thread; // create threads to handle the requests as they come in
 
