@@ -26,7 +26,7 @@ information:
 # 	@$(call get_compiler, $(shell hostname)) $(LDFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o servidor
 
 # proxy.c compilation
-proxy: LinkedList.c
+proxy: lines.c proxy.c servidor.c LinkedList.c
 	@$(call get_compiler, $(shell hostname)) $(LDFLAGS) $(CPPFLAGS) $(LDLIBS) $^ -o servidor
 
 # Clean all files

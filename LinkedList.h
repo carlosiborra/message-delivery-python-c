@@ -103,7 +103,7 @@ uint8_t disconnect_user(UserList *list, char* ip,  char *alias);
  * 1. Search for the user with the given alias in the list. If does not exist, return 2.
  * 2. If user is not connected, return 1.
  * 3. If user is connected, return 0 and the list of connected users with the total number of connected users.
- * @return 0 -> Success, 1 -> User not connected, 2 -> User not found, 3 -> Error
+ * @return ConnectedUsers struct with error_code: 0 -> Success, 1 -> User not connected, 2 -> User not found, 3 -> Error
  */
 ConnectedUsers connected_users(UserList *list, char *alias);
 
@@ -116,6 +116,7 @@ ConnectedUsers connected_users(UserList *list, char *alias);
  * 5. Obtain the last message ID of the source user and increment it by 1 (taking into account the wrap-around to 0).
  * 6.a. If the destination user is connected, send the message to the destination user.
  * 6.b. If the destination user is not connected, store the message in the pending messages list of the destination user and local variable <stored> to 1.
+ * @return 0 -> Success, 1 -> Destination user not found, 2 -> Error
  */
 uint8_t send_message(UserList *list, char *sourceAlias, char *destAlias, char *message);
 

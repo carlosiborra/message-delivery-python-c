@@ -25,7 +25,7 @@ int OPERATION_PARAMS[7] = {0, 4, 1, 1, 4, 1, 2};
 typedef struct
 {
     int socket; // Socket descriptor
-    int operation_code; // Operation code
+    char operation[256]; // Operation to be performed
 } Request;
 
 // Structure of the parameters

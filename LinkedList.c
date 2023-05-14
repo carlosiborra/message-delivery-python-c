@@ -468,50 +468,42 @@ MessageList *create_message_list() {
 //     }
 // }
 
-void print_connected_users(ConnectedUsers connected_users_result) {
-    printf("\nConnected users (size: %d, error code: %d):\n", connected_users_result.size, connected_users_result.error_code);
-    for (unsigned int i = 0; i < connected_users_result.size; i++) {
-        printf("\t👤 Alias: %s\n", connected_users_result.alias[i]);
-    }
-    printf("\n");
-}
+// void print_connected_users(ConnectedUsers connected_users_result) {
+//     printf("\nConnected users (size: %d, error code: %d):\n", connected_users_result.size, connected_users_result.error_code);
+//     for (unsigned int i = 0; i < connected_users_result.size; i++) {
+//         printf("\t👤 Alias: %s\n", connected_users_result.alias[i]);
+//     }
+//     printf("\n");
+// }
 
-int main(void)
-{
-    UserList *user_list = create_user_list();
-    init(user_list);
-    register_user(user_list, "127.0.0.1", "3000", "Carlos Iborra", "carlitos", "01/01/2000");
-    register_user(user_list, "127.0.0.1", "3000", "Rafael Constasti", "el veneco", "01/01/2002");
-    connect_user(user_list, "127.0.0.1", "3000", "el veneco");
-    // print_register_result(register_result);
-    unregister_user(user_list, "el veneco");
-    register_user(user_list, "127.0.0.1", "3000", "Rafael Constasti", "el veneco", "01/01/2002");
+// int main(void)
+// {
+//     register_user(user_list, "127.0.0.1", "3000", "Carlos Iborra", "carlitos", "01/01/2000");
+//     register_user(user_list, "127.0.0.1", "3000", "Rafael Constasti", "el veneco", "01/01/2002");
+//     connect_user(user_list, "127.0.0.1", "3000", "el veneco");
+//     // print_register_result(register_result);
+//     unregister_user(user_list, "el veneco");
+//     register_user(user_list, "127.0.0.1", "3000", "Rafael Constasti", "el veneco", "01/01/2002");
 
-    connect_user(user_list, "127.0.0.1", "3000", "carlitos");
-    disconnect_user(user_list, "127.0.0.1", "carlitos");
-    connect_user(user_list, "127.0.0.1", "3000", "carlitos");
-    // printf("connect user value: %d", connect_user(user_list, "127.0.0.1", "3000", "carlitos"));
+//     connect_user(user_list, "127.0.0.1", "3000", "carlitos");
+//     disconnect_user(user_list, "127.0.0.1", "carlitos");
+//     connect_user(user_list, "127.0.0.1", "3000", "carlitos");
+//     // printf("connect user value: %d", connect_user(user_list, "127.0.0.1", "3000", "carlitos"));
 
-    register_user(user_list, "127.0.0.1", "3000", "Dibox", "diboxo1", "01/06/2002");
-    connect_user(user_list, "127.0.0.1", "3000", "diboxo1");
+//     register_user(user_list, "127.0.0.1", "3000", "Dibox", "diboxo1", "01/06/2002");
+//     connect_user(user_list, "127.0.0.1", "3000", "diboxo1");
 
-    ConnectedUsers connected_users_result = connected_users(user_list, "carlitos");
-    print_connected_users(connected_users_result);
+//     ConnectedUsers connected_users_result = connected_users(user_list, "carlitos");
+//     print_connected_users(connected_users_result);
 
-    printf("Users after registering carlitos:\n");
-    display_users(user_list);
+//     printf("Users after registering carlitos:\n");
+//     display_users(user_list);
 
-    printf("Pending messages of el veneco:\n");
-    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa cruck");
-    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa maquina");
-    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa fiera");
-    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa mastodonte");
-    send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa campeon");
-    display_pending_messages(user_list, "el veneco");
-
-
-
-    // delete linked list
-    delete_user_list(user_list);
-    free(user_list);
-}
+//     printf("Pending messages of el veneco:\n");
+//     send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa cruck");
+//     send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa maquina");
+//     send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa fiera");
+//     send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa mastodonte");
+//     send_message(user_list, "carlitos", "el veneco", "Hola veneco, que pasa campeon");
+//     display_pending_messages(user_list, "el veneco");
+// }

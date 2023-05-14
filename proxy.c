@@ -30,10 +30,7 @@ int busy = true;
 // Using a signal handler to stop the server, forced to declare and use signum to avoid warnings
 void stopServer(int signum)
 {
-    printf("\n\nClosing the server queue...\n\n");
-
-    // Unlink the queue
-    // mq_unlink(MQ_SERVER);
+    printf("\n\nClosing the server and deleting the users list...\n\n");
 
     request_delete_list();
 
@@ -86,50 +83,19 @@ int create_socket(int port)
     return sd;
 }
 
-int read_int(int sd)
+char *read_string(int sd)
 {
-    int int_value = -2;
+    char *string = malloc(MAX_LINE);
 
-    ssize_t bytes_read = read(sd, &int_value, sizeof(int));
+    ssize_t bytes_read = readLine(sd, string, MAX_LINE);
     if (bytes_read == -1)
     {
-        perror("Error reading the integer value");
-        exit(1);
+        perror("Error reading the string");
+        // TODO: Hacer un free del string (cuidao con valgrind)
+        return NULL;
     }
 
-    return int_value;
-}
-
-double read_double(int sd)
-{
-    double double_value = -2;
-
-    ssize_t bytes_read = read(sd, &double_value, sizeof(double));
-    if (bytes_read == -1)
-    {
-        perror("Error reading the double value");
-        exit(1);
-    }
-
-    return double_value;
-}
-
-void send_int(int sd, int int_value)
-{
-	if (send(sd, &int_value, sizeof(int), 0) == -1)
-	{
-		printf("Error sending integer value to the server\n");
-		exit(1);
-	}
-}
-
-void send_double(int sd, double double_value)
-{
-	if (send(sd, &double_value, sizeof(double), 0) == -1)
-	{
-		printf("Error sending double value to the server\n");
-		exit(1);
-	}
+    return string;
 }
 
 void send_string(int sd, char* string)
@@ -144,145 +110,125 @@ void send_string(int sd, char* string)
 }
 
 
-Parameters get_parameters(int client_sd, int operation_code) {
-    int num_parameters = OPERATION_PARAMS[operation_code];
+// Parameters get_parameters(int client_sd, int operation_code) {
+//     int num_parameters = OPERATION_PARAMS[operation_code];
 
-    Parameters parameters;
+//     Parameters parameters;
 
-    if(strcmp(OPERATION_NAMES[operation_code], "copy_key") == 0) {
-        parameters.key1 = read_int(client_sd);
-        parameters.key2 = read_int(client_sd);
-    } else {
-        for (int i = 0; i < num_parameters; i++)
-        {
-            switch (i)
-            {
-            case 0:
-                parameters.key1 = read_int(client_sd);
-                break;
-            case 1:
-                readLine(client_sd, parameters.value1, MAX_LINE);
-                break;
-            case 2:
-                parameters.value2 = read_int(client_sd);
-                break;
-            case 3:
-                parameters.value3 = read_double(client_sd);
-                break;
-            }
-        }
-    }
+//     if(strcmp(OPERATION_NAMES[operation_code], "copy_key") == 0) {
+//         parameters.key1 = read_int(client_sd);
+//         parameters.key2 = read_int(client_sd);
+//     } else {
+//         for (int i = 0; i < num_parameters; i++)
+//         {
+//             switch (i)
+//             {
+//             case 0:
+//                 parameters.key1 = read_int(client_sd);
+//                 break;
+//             case 1:
+//                 readLine(client_sd, parameters.value1, MAX_LINE);
+//                 break;
+//             case 2:
+//                 parameters.value2 = read_int(client_sd);
+//                 break;
+//         }
+//     }
 
-    return parameters;
-}
+//     return parameters;
+// }
 
 void deal_with_request(Request* client_request)
 {
-    char value1response[256] = "";
-    int *value2response = malloc(sizeof(int));
-    double *value3response = malloc(sizeof(double));
+    // Parameters parameters = {0};
 
-    Parameters parameters = {0};
-
-    int operation_code_copy = 0;
+    char operation_code_copy[256] = "";
     int client_sd = 0;
-    // char client_IP[32] = "";
-    // int client_port = 0;
-    // struct sockaddr_in client_addr = {0};
-    // socklen_t client_addr_len = sizeof(client_addr);
+    char client_IP[16] = "";
+    int client_port = 0;
+    struct sockaddr_in client_addr = {0};
+    socklen_t client_addr_len = sizeof(client_addr);
 
     // * Lock the mutex on the process of request copying
     pthread_mutex_lock(&mutex);
-    operation_code_copy = client_request->operation_code;
+    strcpy(client_request->operation, operation_code_copy);
     client_sd = client_request->socket;
 
-    // // get the client IP and port
-    // getpeername(client_sd, (struct sockaddr *)&client_addr, &client_addr_len);
-    // strcpy(client_IP, inet_ntoa(client_addr.sin_addr));
-    // client_port = ntohs(client_addr.sin_port);
+    // get the client IP and port
+    getpeername(client_sd, (struct sockaddr *)&client_addr, &client_addr_len);
+    strcpy(client_IP, inet_ntoa(client_addr.sin_addr));
+    client_port = ntohs(client_addr.sin_port);
 
-    // // print the client IP and port
-    // printf("IP: %s, Port: %d\n", client_IP, client_port);
+    // print the client IP and port
+    printf("IP: %s, Port: %d\n", client_IP, client_port);
 
     // printf("📥 Message Received -> Executing \"%s\" by %s:\n", OPERATION_NAMES[client_request_copy.operacion], client_request_copy.clientPID);
     busy = false;
     pthread_cond_signal(&cond);
     pthread_mutex_unlock(&mutex);
 
-    // * Response (message)
-    int error_code = -1;
+    // // * Response (message)
+    // int error_code = -1;
 
-    switch (operation_code_copy)
-    {
-    case init_op:
-        error_code = list_init();
-        // list_display_list();
-        break;
+    // switch (operation_code_copy)
+    // {
+    // case init_op:
+    //     error_code = list_init();
+    //     // list_display_list();
+    //     break;
 
-    case set_value_op:
-        parameters = get_parameters(client_sd, operation_code_copy);
-        error_code = list_set_value(parameters.key1, parameters.value1, parameters.value2, parameters.value3);
-        // list_display_list();
-        break;
+    // case set_value_op:
+    //     parameters = get_parameters(client_sd, operation_code_copy);
+    //     error_code = list_set_value(parameters.key1, parameters.value1, parameters.value2, parameters.value3);
+    //     // list_display_list();
+    //     break;
 
-    case get_value_op:
-        // Initialize the memory pointed by value2response and value3response to avoid garbage values
-        *value2response = 0;
-        *value3response = 0.0;
+    // case get_value_op:
+    //     // Initialize the memory pointed by value2response and value3response to avoid garbage values
+    //     *value2response = 0;
+    //     *value3response = 0.0;
 
-        parameters = get_parameters(client_sd, operation_code_copy);
+    //     parameters = get_parameters(client_sd, operation_code_copy);
 
-        error_code = list_get_value(parameters.key1, value1response, value2response, value3response);
-        // list_display_list();
-        break;
+    //     error_code = list_get_value(parameters.key1, value1response, value2response, value3response);
+    //     // list_display_list();
+    //     break;
 
-    case delete_key_op:
-        parameters = get_parameters(client_sd, operation_code_copy);
-        error_code = list_delete_key(parameters.key1);
-        // list_display_list();
-        break;
+    // case delete_key_op:
+    //     parameters = get_parameters(client_sd, operation_code_copy);
+    //     error_code = list_delete_key(parameters.key1);
+    //     // list_display_list();
+    //     break;
 
-    case modify_value_op:
-        parameters = get_parameters(client_sd, operation_code_copy);
-        error_code = list_modify_value(parameters.key1, parameters.value1, parameters.value2, parameters.value3);
-        // list_display_list();
-        break;
+    // case modify_value_op:
+    //     parameters = get_parameters(client_sd, operation_code_copy);
+    //     error_code = list_modify_value(parameters.key1, parameters.value1, parameters.value2, parameters.value3);
+    //     // list_display_list();
+    //     break;
 
-    case exist_op:
-        parameters = get_parameters(client_sd, operation_code_copy);
-        error_code = list_exist(parameters.key1);
-        // list_display_list();
-        break;
+    // case exist_op:
+    //     parameters = get_parameters(client_sd, operation_code_copy);
+    //     error_code = list_exist(parameters.key1);
+    //     // list_display_list();
+    //     break;
 
-    case copy_key_op:
-        parameters = get_parameters(client_sd, operation_code_copy);
-        error_code = list_copy_key(parameters.key1, parameters.key2);
-        // list_display_list();
-        break;
-    }
+    // case copy_key_op:
+    //     parameters = get_parameters(client_sd, operation_code_copy);
+    //     error_code = list_copy_key(parameters.key1, parameters.key2);
+    //     // list_display_list();
+    //     break;
+    // }
 
-    // * Send the error code to the client
-    if (send(client_sd, &error_code, sizeof(int), 0) == -1)
-    {
-        printf("Error sending error code to the client\n");
-        printf("Error code: %d\n", error_code);
-        exit(1);
-    }
-
-    if(strcmp(OPERATION_NAMES[operation_code_copy], "get_value") == 0 && error_code == 0) {
-        // send the value1response
-        send_string(client_sd, value1response);
-        // send the value2response
-        send_int(client_sd, *value2response);
-        // send the value3response
-        send_double(client_sd, *value3response);
-    }
+    // // * Send the error code to the client
+    // if (send(client_sd, &error_code, sizeof(int), 0) == -1)
+    // {
+    //     printf("Error sending error code to the client\n");
+    //     printf("Error code: %d\n", error_code);
+    //     exit(1);
+    // }
 
     // close the socket
     close(client_sd);
-
-    free(value2response);
-    free(value3response);
 }
 
 /**
@@ -296,19 +242,19 @@ int process_port(int argc, char *argv[])
 {
     char *end;
 
-    if (argc != 2)
+    if (argc != 3)
     {
-        printf("Usage: %s <port>\n", argv[0]);
+        printf("Usage: %s -p <port>\n", argv[0]);
         exit(1);
     }
 
     // Now we are sure that the user has only entered the port
     // -> Let's check if it's an integer and then convert it to int
-    int port = (int)strtol(argv[1], &end, 10);
+    int port = (int)strtol(argv[2], &end, 10);
 
     if (*end != '\0')
     {
-        printf("Invalid port number format: %s\n", argv[1]);
+        printf("Invalid port number format: %s\n", argv[2]);
         exit(1);
     }
 
@@ -360,18 +306,9 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        // * Request (message)
-        int operation_code;
-        ssize_t bytes_read = read(client_sd, &operation_code, sizeof(int));
-        if (bytes_read == -1)
-        {
-            perror("Error reading the request");
-            exit(1);
-        }
-
         // * Create the request
         client_request.socket = client_sd;
-        client_request.operation_code = operation_code;
+        strcpy(client_request.operation, read_string(client_sd));
 
         // ! We create a thread for each request and execute the function deal_with_request
         pthread_t thread; // create threads to handle the requests as they come in
@@ -386,8 +323,6 @@ int main(int argc, char *argv[])
         }
         busy = true;                  // Set the thread as busy
         pthread_mutex_unlock(&mutex); // Unlock the mutex
-
-        // printf(" -> Response sent!\n\n");
     }
 
     // ! Destroy the mutex and the condition variable
