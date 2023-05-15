@@ -205,6 +205,7 @@ ConnectedUsers list_connected_users(char *alias) {
     return connected_users_result;
 }
 
+
 /**
  * @brief Send a message from a user to another user.
  * @param sourceAlias char*

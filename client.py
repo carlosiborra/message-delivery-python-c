@@ -23,6 +23,7 @@ class client :
     _username = None
     _alias = None
     _date = None
+    _listen_thread = None
 
     # ******************** METHODS *******************
 
@@ -76,11 +77,11 @@ class client :
             return client.RC.ERROR
 
     # *
-    # 	 * @param user - User name to unregister from the system
-    # 	 *
-    # 	 * @return OK if successful
-    # 	 * @return USER_ERROR if the user does not exist
-    # 	 * @return ERROR if another error occurred
+    # * @param user - User name to unregister from the system
+    # *
+    # * @return OK if successful
+    # * @return USER_ERROR if the user does not exist
+    # * @return ERROR if another error occurred
     @staticmethod
     def  unregister(user, window):
         try: 
@@ -112,6 +113,18 @@ class client :
             window['_SERVER_'].print("s> UNREGISTER FAIL")
             return client.RC.ERROR
 
+    @staticmethod
+    def listen(sock, window):
+        print("I'm listening boy")
+        while True:
+            cadena = sock.recv(256).decode()
+            if cadena == "SEND_MESSAGE":
+                sourceAlias = sock.recv(256).decode()
+                messageId = sock.recv(256).decode()
+                message = sock.recv(256).decode()
+                if not message:
+                    break
+                window['_SERVER_'].print(f"s> MESSAGE {messageId} FROM {sourceAlias} \n{message}\nEND")
 
     # *
     # * @param user - User name to connect to the system
@@ -121,9 +134,55 @@ class client :
     # * @return ERROR if another error occurred
     @staticmethod
     def  connect(user, window):
-        window['_SERVER_'].print("s> CONNECT OK")
-        #  Write your code here
-        return client.RC.ERROR
+        try: 
+            sock = client.create_socket_and_connect()
+
+            # Create a socket to listen for messages
+            listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            listening_sock.bind(('', 0))
+            listening_port = listening_sock.getsockname()[1]
+            print(f"Listening port: {listening_port}")
+
+            # Start listening for messages
+            listening_sock.listen(1)
+            connection, addr = listening_sock.accept()
+            print(f"Connection from {addr}")
+
+            listen_thread = threading.Thread(target=client.listen, args=(connection, window))
+            listen_thread.daemon = True # Stop the thread when the main thread ends
+            listen_thread.start()
+
+            # Indicate the server that we want to register
+            sock.sendall("CONNECT".encode())
+            sock.sendall(b'\0')
+
+            # Sending the rest of the data: alias, port where we are listening for the messages
+            sock.sendall(client._alias.encode())
+            sock.sendall(b'\0')
+
+            sock.sendall(str(listening_port).encode())
+            sock.sendall(b'\0')
+
+            # Receive the response from the server
+            response = sock.recv(1).decode()
+
+            print(f"Response: {response}")
+
+            if (response == "0"):
+                window['_SERVER_'].print("s> CONNECT OK")
+                return client.RC.OK
+            elif (response == "1"):
+                window['_SERVER_'].print("s> CONNECT FAIL, USER DOES NOT EXIST")
+                return client.RC.USER_ERROR
+            elif (response == "2"):
+                window['_SERVER_'].print("s> USER ALREADY CONNECTED")
+                return client.RC.USER_ERROR
+            else:
+                window['_SERVER_'].print("s> CONNECT FAIL")
+                return client.RC.ERROR
+        except Exception as _:
+            window['_SERVER_'].print("s> CONNECT FAIL")
+            return client.RC.ERROR
 
 
     # *
@@ -134,9 +193,40 @@ class client :
     # * @return ERROR if another error occurred
     @staticmethod
     def  disconnect(user, window):
-        window['_SERVER_'].print("s> DISCONNECT OK")
-        #  Write your code here
-        return client.RC.ERROR
+        try:
+            sock = client.create_socket_and_connect()
+
+            # Indicate the server that we want to register
+            sock.sendall("DISCONNECT".encode())
+            sock.sendall(b'\0')
+
+            # Sending the rest of the data: alias
+            sock.sendall(client._alias.encode())
+            sock.sendall(b'\0')
+
+            # Receive the response from the server
+            response = sock.recv(1).decode()
+            
+            print(f"Response: {response}")
+
+            if (response == "0"):
+                window['_SERVER_'].print("s> DISCONNECT OK")
+                return client.RC.OK
+            elif (response == "1"):
+                window['_SERVER_'].print("s> DISCONNECT FAIL / USER DOES NOT EXIST")
+                return client.RC.USER_ERROR
+            elif (response == "2"):
+                window['_SERVER_'].print("s> DISCONNECT FAIL / USER NOT CONNECTED")
+                return client.RC.USER_ERROR
+            else:
+                window['_SERVER_'].print("s> DISCONNECT FAIL")
+                return client.RC.ERROR
+
+        except Exception as _:
+            window['_SERVER_'].print("s> DISCONNECT FAIL")
+            return client.RC.ERROR
+            
+        
 
     # *
     # * @param user    - Receiver user name
@@ -170,9 +260,51 @@ class client :
 
     @staticmethod
     def  connectedUsers(window):
-        window['_SERVER_'].print("s> CONNECTED USERS OK")
-        #  Write your code here
-        return client.RC.ERROR
+        try: 
+            sock = client.create_socket_and_connect()
+
+            # Indicate the server that we want to register
+            sock.sendall("CONNECTEDUSERS".encode())
+            sock.sendall(b'\0')
+
+            # Sending the rest of the data: username, alias and date
+            sock.sendall(client._username.encode())
+            sock.sendall(b'\0')
+            sock.sendall(client._alias.encode())
+            sock.sendall(b'\0')
+            sock.sendall(client._date.encode())
+            sock.sendall(b'\0')
+
+            # Receive the response from the server
+            response = sock.recv(1).decode()
+            
+            print(f"Response: {response}")
+
+            if (response == "0"):
+                numConnUsers = sock.recv(6).decode()
+                server_message = f"s> CONNECTED USERS ({numConnUsers} users connected) OK -"
+                numConnUsersInt = int(numConnUsers)
+                numConnUsersPassed = 0
+                while numConnUsersPassed < numConnUsersInt:
+                    connUser = sock.recv(256).decode()
+                    if numConnUsersPassed == numConnUsersInt - 1:
+                        server_message += f" {connUser}"
+                    else:
+                        server_message += f" {connUser},"
+                    numConnUsersPassed += 1
+                window['_SERVER_'].print(server_message)
+                return client.RC.OK
+            elif (response == "1"):
+                window['_SERVER_'].print("s> CONNECTED USERS FAIL / USER IS NOT CONNECTED")
+                return client.RC.USER_ERROR
+            else:
+                window['_SERVER_'].print("s> CONNECTED USERS FAIL")
+                return client.RC.ERROR
+            
+    
+        except Exception as _:
+            window['_SERVER_'].print("s> CONNECTED USERS FAIL")
+            return client.RC.ERROR
 
 
     @staticmethod

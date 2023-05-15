@@ -222,44 +222,95 @@ void deal_with_request(Request *client_request)
     char client_port_str[6];
     sprintf(client_port_str, "%d", client_port);
 
+    char port[6];
+    char name[256];  // Name of the user: 255 characters + '\0'
+    char alias[256]; // Alias of the user: 255 characters + '\0' <- IDENTIFIER
+    char birth[11];  // Birth of the user: "DD/MM/AAAA" + '\0'
+
     uint8_t error_code;
     switch (operation_code_int)
     {
-    case REGISTER:
+        case REGISTER:
+            // * Read the parameters
+            strcpy(name, read_string(client_sd));
+            strcpy(alias, read_string(client_sd));
+            strcpy(birth, read_string(client_sd));
 
-        char name[256];  // Name of the user: 255 characters + '\0'
-        char alias[256]; // Alias of the user: 255 characters + '\0' <- IDENTIFIER
-        char birth[11];  // Birth of the user: "DD/MM/AAAA" + '\0'
+            // * Register the user
+            error_code = list_register_user(client_IP, client_port_str, name, alias, birth);
+            list_display_user_list();
 
-        // * Read the parameters
-        strcpy(name, read_string(client_sd));
-        strcpy(alias, read_string(client_sd));
-        strcpy(birth, read_string(client_sd));
+            // * Send the error code to the client
+            send_string_response(error_code, client_sd);
 
-        // * Register the user
-        error_code = list_register_user(client_IP, client_port_str, name, alias, birth);
-        list_display_user_list();
+            break;
 
-        // * Send the error code to the client
-        send_string_response(error_code, client_sd);
+        case UNREGISTER:
 
-        break;
+            // * Read the parameters
+            strcpy(alias, read_string(client_sd));
+            
+            // * Unregister the user
+            error_code = list_unregister_user(alias);
+            list_display_user_list();
 
-    case UNREGISTER:
+            // * Send the error code to the client
+            send_string_response(error_code, client_sd);
 
-        char alias_unregister[256]; // Alias of the user: 255 characters + '\0' <- IDENTIFIER
+            break;
 
-        // * Read the parameters
-        strcpy(alias_unregister, read_string(client_sd));
-        
-        // * Unregister the user
-        error_code = list_unregister_user(alias_unregister);
-        list_display_user_list();
+        case CONNECT:
 
-        // * Send the error code to the client
-        send_string_response(error_code, client_sd);
+            // * Read the parameters
+            strcpy(alias, read_string(client_sd));
+            strcpy(port, read_string(client_sd));
 
-        break;
+
+            // * Connect the user
+            error_code = list_connect_user(client_IP, port, alias);
+            list_display_user_list();
+
+            // * Send the error code to the client
+            send_string_response(error_code, client_sd);
+
+            break;
+
+        case DISCONNECT:
+
+            // * Read the parameters
+            strcpy(alias, read_string(client_sd));
+
+            // * Disconnect the user
+            error_code = list_disconnect_user(client_IP, alias);
+            list_display_user_list();
+
+            // * Send the error code to the client
+            send_string_response(error_code, client_sd);
+
+            break;
+
+        case CONNECTEDUSERS: 
+            // * Read the parameters
+            strcpy(alias, read_string(client_sd));
+ 
+            // * Get the list of connected users
+            ConnectedUsers connUsers = list_connected_users(alias);
+            list_display_user_list();
+
+            // * Send the list of connected users to the client
+            send_string_response(connUsers.error_code, client_sd);
+
+            // * Send the number of connected users to the client
+            char connUserSize[6];
+            sprintf(connUserSize, "%d", connUsers.size);
+            send_string(client_sd, connUserSize);
+
+            // * Send the list of connected users to the client
+            for (unsigned int i = 0; i < connUsers.size; i++) {
+                send_string(client_sd, connUsers.alias[i]);
+            }
+
+            break;
     }
 
     // close the socket
