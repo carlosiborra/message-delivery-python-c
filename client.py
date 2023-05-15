@@ -23,7 +23,8 @@ class client :
     _username = None
     _alias = None
     _date = None
-    _listen_thread = None
+    _listening_sock = None
+    _listening_port = -1
 
     # ******************** METHODS *******************
 
@@ -60,6 +61,9 @@ class client :
 
             # Receive the response from the server
             response = sock.recv(1).decode()
+
+            # Close the socket
+            sock.close()
             
             print(f"Response: {response}")
 
@@ -97,6 +101,9 @@ class client :
 
             # Receive the response from the server
             response = sock.recv(1).decode()
+
+            # Close the socket
+            sock.close()
             
             print(f"Response: {response}")
 
@@ -115,16 +122,33 @@ class client :
 
     @staticmethod
     def listen(sock, window):
-        print("I'm listening boy")
+        # Start listening for messages
+        sock.listen(1)
+
         while True:
-            cadena = sock.recv(256).decode()
-            if cadena == "SEND_MESSAGE":
-                sourceAlias = sock.recv(256).decode()
-                messageId = sock.recv(256).decode()
-                message = sock.recv(256).decode()
-                if not message:
-                    break
-                window['_SERVER_'].print(f"s> MESSAGE {messageId} FROM {sourceAlias} \n{message}\nEND")
+            try:
+                # Accept a connection
+                C_socket, C_address = sock.accept()
+                print(f"Connection from {C_address} has been established!")
+
+                cadena = C_socket.recv(256).decode()
+                if cadena == "SEND_MESSAGE":
+                    sourceAlias = C_socket.recv(256).decode()
+                    messageId = C_socket.recv(256).decode()
+                    message = C_socket.recv(256).decode()
+                    if not message:
+                        break
+                    window['_SERVER_'].print(f"s> MESSAGE {messageId} FROM {sourceAlias} \n{message}\nEND")
+
+                # Close the connection with the client
+                C_socket.close()
+
+            except Exception as _:
+                sock.close()
+
+        # Close the listening socket
+        sock.close()
+
 
     # *
     # * @param user - User name to connect to the system
@@ -137,20 +161,13 @@ class client :
         try: 
             sock = client.create_socket_and_connect()
 
-            # Create a socket to listen for messages
-            listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            listening_sock.bind(('', 0))
-            listening_port = listening_sock.getsockname()[1]
-            print(f"Listening port: {listening_port}")
-
-            # Start listening for messages
-            listening_sock.listen(1)
-            connection, addr = listening_sock.accept()
-            print(f"Connection from {addr}")
-
-            listen_thread = threading.Thread(target=client.listen, args=(connection, window))
-            listen_thread.daemon = True # Stop the thread when the main thread ends
-            listen_thread.start()
+            # Check if we have already created a socket to listen for messages
+            # If not, create it
+            if client._listening_port == -1:
+                # Create a socket to listen for messages
+                client._listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client._listening_sock.bind(('', 0))
+                client._listening_port = client._listening_sock.getsockname()[1]
 
             # Indicate the server that we want to register
             sock.sendall("CONNECT".encode())
@@ -160,7 +177,7 @@ class client :
             sock.sendall(client._alias.encode())
             sock.sendall(b'\0')
 
-            sock.sendall(str(listening_port).encode())
+            sock.sendall(str(client._listening_port).encode())
             sock.sendall(b'\0')
 
             # Receive the response from the server
@@ -169,15 +186,27 @@ class client :
             print(f"Response: {response}")
 
             if (response == "0"):
+                print(f"Listening port: {client._listening_port}")
+
+                listen_thread = threading.Thread(target=client.listen, args=(client._listening_sock, window))
+                listen_thread.daemon = True # Stop the thread when the main thread ends
+                listen_thread.start()
+
+                sock.close()
+
                 window['_SERVER_'].print("s> CONNECT OK")
+
                 return client.RC.OK
             elif (response == "1"):
+                sock.close()
                 window['_SERVER_'].print("s> CONNECT FAIL, USER DOES NOT EXIST")
                 return client.RC.USER_ERROR
             elif (response == "2"):
+                sock.close()
                 window['_SERVER_'].print("s> USER ALREADY CONNECTED")
                 return client.RC.USER_ERROR
             else:
+                sock.close()
                 window['_SERVER_'].print("s> CONNECT FAIL")
                 return client.RC.ERROR
         except Exception as _:
@@ -206,11 +235,20 @@ class client :
 
             # Receive the response from the server
             response = sock.recv(1).decode()
+
+            # Close the socket
+            sock.close()
             
             print(f"Response: {response}")
 
             if (response == "0"):
                 window['_SERVER_'].print("s> DISCONNECT OK")
+
+                # Stop listening for messages
+                client._stop_listening = True
+                client._listening_sock.close()
+                client._listening_port = -1
+
                 return client.RC.OK
             elif (response == "1"):
                 window['_SERVER_'].print("s> DISCONNECT FAIL / USER DOES NOT EXIST")
@@ -267,12 +305,8 @@ class client :
             sock.sendall("CONNECTEDUSERS".encode())
             sock.sendall(b'\0')
 
-            # Sending the rest of the data: username, alias and date
-            sock.sendall(client._username.encode())
-            sock.sendall(b'\0')
+            # Sending the rest of the data: alias
             sock.sendall(client._alias.encode())
-            sock.sendall(b'\0')
-            sock.sendall(client._date.encode())
             sock.sendall(b'\0')
 
             # Receive the response from the server
@@ -281,23 +315,36 @@ class client :
             print(f"Response: {response}")
 
             if (response == "0"):
-                numConnUsers = sock.recv(6).decode()
+                print("Connected users:")
+                numConnUsers = sock.recv(7).decode()
+                print(repr(numConnUsers))
+                # remove "\x00 " at the beginning of the string
+                numConnUsers = numConnUsers[2:]
+                print(repr(numConnUsers))
                 server_message = f"s> CONNECTED USERS ({numConnUsers} users connected) OK -"
                 numConnUsersInt = int(numConnUsers)
+                print(f"numConnUsersInt: {numConnUsersInt}")
                 numConnUsersPassed = 0
                 while numConnUsersPassed < numConnUsersInt:
                     connUser = sock.recv(256).decode()
+                    print(f"connUser: {connUser}")
                     if numConnUsersPassed == numConnUsersInt - 1:
                         server_message += f" {connUser}"
                     else:
                         server_message += f" {connUser},"
                     numConnUsersPassed += 1
+
+                # Close the socket
+                sock.close()    
+                
                 window['_SERVER_'].print(server_message)
                 return client.RC.OK
             elif (response == "1"):
+                sock.close()
                 window['_SERVER_'].print("s> CONNECTED USERS FAIL / USER IS NOT CONNECTED")
                 return client.RC.USER_ERROR
             else:
+                sock.close()
                 window['_SERVER_'].print("s> CONNECTED USERS FAIL")
                 return client.RC.ERROR
             

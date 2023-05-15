@@ -301,8 +301,9 @@ void deal_with_request(Request *client_request)
             send_string_response(connUsers.error_code, client_sd);
 
             // * Send the number of connected users to the client
-            char connUserSize[6];
-            sprintf(connUserSize, "%d", connUsers.size);
+            char connUserSize[7];
+            sprintf(connUserSize, "%05d", connUsers.size);
+            connUserSize[6] = '\0';
             send_string(client_sd, connUserSize);
 
             // * Send the list of connected users to the client

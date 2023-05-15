@@ -173,7 +173,6 @@ uint8_t connect_user(UserList *list, char* ip, char* port, char* alias) {
     strncpy(user->ip, ip, 16);              // Update IP
     strncpy(user->port, port, 6);           // Update port
     user->status = 1;                       // Set status to connected
-    user->messageId = 0;                    // Initial message ID is 0 (reset to 0 when connecting)
     return 0;
 }
 
