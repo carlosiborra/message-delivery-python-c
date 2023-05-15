@@ -35,6 +35,29 @@ class client :
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((client._server, client._port))
         return sock
+    
+    @staticmethod
+    def readNumber(sock):
+        a = ''
+        while True:
+            msg = sock.recv(1)
+            if (msg == b'\0'):
+                break;
+            a += msg.decode()
+
+        return(int(a,10))
+    
+    @staticmethod
+    def readString(sock):
+        a = ''
+        while True:
+            msg = sock.recv(1)
+            if (msg == b'\0'):
+                break;
+            a += msg.decode()
+
+        return(a)
+
 
     # *
     # * @param user - User name to register in the system
@@ -315,29 +338,12 @@ class client :
             print(f"Response: {response}")
 
             if (response == b'\x00'):
-                print("Connected users:")
-                numConnUsers = sock.recv(7).decode()
-                print(repr(numConnUsers))
-                # remove "\x00 " at the beginning of the string
-                numConnUsers = numConnUsers[2:]
-                print(repr(numConnUsers))
-                server_message = f"s> CONNECTED USERS ({numConnUsers} users connected) OK -"
-                numConnUsersInt = int(numConnUsers)
-                print(f"numConnUsersInt: {numConnUsersInt}")
-                numConnUsersPassed = 0
-                while numConnUsersPassed < numConnUsersInt:
-                    connUser = sock.recv(256).decode()
-                    print(f"connUser: {connUser}")
-                    if numConnUsersPassed == numConnUsersInt - 1:
-                        server_message += f" {connUser}"
-                    else:
-                        server_message += f" {connUser},"
-                    numConnUsersPassed += 1
-
-                # Close the socket
+                # Read the number of connected users and then read as many aliases as connected users are (joining them by commas)
+                numConnUsers = client.readNumber(sock)
+                aliases = ', '.join([client.readString(sock) for _ in range(numConnUsers)])
                 sock.close()    
                 
-                window['_SERVER_'].print(server_message)
+                window['_SERVER_'].print(f"s> CONNECTED USERS ({numConnUsers} users connected) OK - {aliases}")
                 return client.RC.OK
             elif (response == b'\x01'):
                 sock.close()

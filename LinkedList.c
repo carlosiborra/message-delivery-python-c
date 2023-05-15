@@ -225,6 +225,7 @@ ConnectedUsers connected_users(UserList *list, char *alias) {
     while (current != NULL) {
         if (current->status == 1) {
             result.alias[result.size] = current->alias;
+            result.alias[result.size][255] = '\0'; // Make sure the string is null-terminated
             result.size++;
         }
         current = current->next;
@@ -260,14 +261,14 @@ uint8_t send_message(UserList *list, char *sourceAlias, char *destAlias, char *m
         return 1;
     }
 
+    source_user->messageId = (source_user->messageId + 1) % UINT_MAX;
+
     if (dest_user->status == 1) {
         // Send the message to the destination user
         // Implement the actual sending function depending on the communication protocol
     } else {
         add_pending_message(dest_user, sourceAlias, source_user->messageId, message);
     }
-
-    source_user->messageId = (source_user->messageId + 1) % UINT_MAX;
 
     return 0;
 }
