@@ -170,14 +170,12 @@ int8_t get_operation_code(char *operation_code_str)
 
 /**
  * @brief Send the response to the client
+ * @param socket (socket descriptor of the client)
  * @param error_code
- * @param client_sd (socket descriptor of the client)
  */
-void send_string_response(uint8_t error_code, int client_sd)
+void send_error_code(int socket, char error_code)
 {
-    char error_code_str[4];
-    sprintf(error_code_str, "%hhu", error_code);
-    send_string(client_sd, error_code_str);
+    sendMessage(socket, &error_code, sizeof(char));
 }
 
 /**
@@ -241,7 +239,7 @@ void deal_with_request(Request *client_request)
             list_display_user_list();
 
             // * Send the error code to the client
-            send_string_response(error_code, client_sd);
+            send_error_code(client_sd, error_code);
 
             break;
 
@@ -255,7 +253,7 @@ void deal_with_request(Request *client_request)
             list_display_user_list();
 
             // * Send the error code to the client
-            send_string_response(error_code, client_sd);
+            send_error_code(client_sd, error_code);
 
             break;
 
@@ -271,7 +269,7 @@ void deal_with_request(Request *client_request)
             list_display_user_list();
 
             // * Send the error code to the client
-            send_string_response(error_code, client_sd);
+            send_error_code(client_sd, error_code);
 
             break;
 
@@ -285,7 +283,7 @@ void deal_with_request(Request *client_request)
             list_display_user_list();
 
             // * Send the error code to the client
-            send_string_response(error_code, client_sd);
+            send_error_code(client_sd, error_code);
 
             break;
 
@@ -298,7 +296,7 @@ void deal_with_request(Request *client_request)
             list_display_user_list();
 
             // * Send the list of connected users to the client
-            send_string_response(connUsers.error_code, client_sd);
+            send_error_code(client_sd, connUsers.error_code);
 
             // * Send the number of connected users to the client
             char connUserSize[7];

@@ -60,17 +60,17 @@ class client :
             sock.sendall(b'\0')
 
             # Receive the response from the server
-            response = sock.recv(1).decode()
+            response = sock.recv(1)
 
             # Close the socket
             sock.close()
             
             print(f"Response: {response}")
 
-            if (response == "0"):
+            if (response == b'\x00'):
                 window['_SERVER_'].print("s> REGISTER OK")
                 return client.RC.OK
-            elif (response == "1"):
+            elif (response == b'\x01'):
                 window['_SERVER_'].print("s> USERNAME IN USE")
                 return client.RC.USER_ERROR
             else:
@@ -100,17 +100,17 @@ class client :
             sock.sendall(b'\0')
 
             # Receive the response from the server
-            response = sock.recv(1).decode()
+            response = sock.recv(1)
 
             # Close the socket
             sock.close()
             
             print(f"Response: {response}")
 
-            if (response == "0"):
+            if (response == b'\x00'):
                 window['_SERVER_'].print("s> UNREGISTER OK")
                 return client.RC.OK
-            elif (response == "1"):
+            elif (response == b'\x01'):
                 window['_SERVER_'].print("s> USERNAME DOES NOT EXIST")
                 return client.RC.USER_ERROR
             else:
@@ -181,11 +181,11 @@ class client :
             sock.sendall(b'\0')
 
             # Receive the response from the server
-            response = sock.recv(1).decode()
+            response = sock.recv(1)
 
             print(f"Response: {response}")
 
-            if (response == "0"):
+            if (response == b'\x00'):
                 print(f"Listening port: {client._listening_port}")
 
                 listen_thread = threading.Thread(target=client.listen, args=(client._listening_sock, window))
@@ -197,11 +197,11 @@ class client :
                 window['_SERVER_'].print("s> CONNECT OK")
 
                 return client.RC.OK
-            elif (response == "1"):
+            elif (response == b'\x01'):
                 sock.close()
                 window['_SERVER_'].print("s> CONNECT FAIL, USER DOES NOT EXIST")
                 return client.RC.USER_ERROR
-            elif (response == "2"):
+            elif (response == b'\x02'):
                 sock.close()
                 window['_SERVER_'].print("s> USER ALREADY CONNECTED")
                 return client.RC.USER_ERROR
@@ -234,14 +234,14 @@ class client :
             sock.sendall(b'\0')
 
             # Receive the response from the server
-            response = sock.recv(1).decode()
+            response = sock.recv(1)
 
             # Close the socket
             sock.close()
             
             print(f"Response: {response}")
 
-            if (response == "0"):
+            if (response == b'\x00'):
                 window['_SERVER_'].print("s> DISCONNECT OK")
 
                 # Stop listening for messages
@@ -250,10 +250,10 @@ class client :
                 client._listening_port = -1
 
                 return client.RC.OK
-            elif (response == "1"):
+            elif (response == b'\x01'):
                 window['_SERVER_'].print("s> DISCONNECT FAIL / USER DOES NOT EXIST")
                 return client.RC.USER_ERROR
-            elif (response == "2"):
+            elif (response == b'\x02'):
                 window['_SERVER_'].print("s> DISCONNECT FAIL / USER NOT CONNECTED")
                 return client.RC.USER_ERROR
             else:
@@ -310,11 +310,11 @@ class client :
             sock.sendall(b'\0')
 
             # Receive the response from the server
-            response = sock.recv(1).decode()
+            response = sock.recv(1)
             
             print(f"Response: {response}")
 
-            if (response == "0"):
+            if (response == b'\x00'):
                 print("Connected users:")
                 numConnUsers = sock.recv(7).decode()
                 print(repr(numConnUsers))
@@ -339,7 +339,7 @@ class client :
                 
                 window['_SERVER_'].print(server_message)
                 return client.RC.OK
-            elif (response == "1"):
+            elif (response == b'\x01'):
                 sock.close()
                 window['_SERVER_'].print("s> CONNECTED USERS FAIL / USER IS NOT CONNECTED")
                 return client.RC.USER_ERROR
