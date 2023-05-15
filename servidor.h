@@ -72,9 +72,9 @@ ConnectedUsers list_connected_users(char *alias);
  * @param sourceAlias char*
  * @param destAlias char*
  * @param message char*
- * @return 0 -> Success, 1 -> Destination user not found, 2 -> Error
+ * @return a struct ReceiverMessage with error code 0 -> Success, 1 -> Destination user not found, 2 -> Error
  */
-uint8_t list_send_message(char *sourceAlias, char *destAlias, char *message);
+ReceiverMessage list_send_message(char *sourceAlias, char *destAlias, char *message);
 
 /**
  * @brief Display the list.

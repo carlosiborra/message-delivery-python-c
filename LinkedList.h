@@ -52,6 +52,14 @@ typedef struct
     uint8_t error_code;             // Error code: 0 -> Success, 1 -> User not connected, 2 -> User not found, 3 -> Error
 } ConnectedUsers;
 
+typedef struct
+{
+    char ip[16];                    // IP address of the receiver
+    char port[6];                   // Port of the receiver
+    unsigned int msgId;             // Message ID sent by the sending user
+    uint8_t error_code;             // Error code: 0 -> Success, 1 -> User not found, 2 -> Error
+} ReceiverMessage;
+
 /**
  * @brief Search for a user with the given alias in the list.
  * @return NULL if the alias does not exist in the list. Otherwise, return a pointer to the user entry.
@@ -108,7 +116,7 @@ uint8_t disconnect_user(UserList *list, char* ip,  char *alias);
 ConnectedUsers connected_users(UserList *list, char *alias);
 
 /**
- * @brief Send a message from a user to another user. 
+ * @brief Send a message from a user to another user.
  * 1. Validate the message length.
  * 2. Search for the source user in the list. If it does not exist, return 2.
  * 3. If the source user is not connected, return 3.
@@ -116,9 +124,15 @@ ConnectedUsers connected_users(UserList *list, char *alias);
  * 5. Obtain the last message ID of the source user and increment it by 1 (taking into account the wrap-around to 0).
  * 6.a. If the destination user is connected, send the message to the destination user.
  * 6.b. If the destination user is not connected, store the message in the pending messages list of the destination user and local variable <stored> to 1.
- * @return 0 -> Success, 1 -> Destination user not found, 2 -> Error
+ * @return a ReceiverMessage struct with error_code 0 -> Success, 1 -> Destination user not found, 2 -> Error
  */
-uint8_t send_message(UserList *list, char *sourceAlias, char *destAlias, char *message);
+ReceiverMessage send_message(UserList *list, char *sourceAlias, char *destAlias, char *message);
+
+/**
+ * @brief Create a socket and connect it to the client.
+ * 
+ */
+int create_and_connect_socket();
 
 /**
  * @brief Initialise service and destroys all stored users and pending messages of those users.

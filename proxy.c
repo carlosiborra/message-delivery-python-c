@@ -37,6 +37,48 @@ void stopServer(int signum)
     exit(signum);
 }
 
+int validate_port(char *port_str) {
+    char *end;
+
+    // Now we are sure that the user has only entered the port
+    // -> Let's check if it's an integer and then convert it to int
+    int port = (int)strtol(port_str, &end, 10);
+
+    if (*end != '\0')
+    {
+        printf("Invalid port number format: %s\n", port_str);
+        exit(1);
+    }
+
+    if (port < 1024 || port > 65535)
+    {
+        printf("Invalid port number: %d\n", port);
+        exit(1);
+    }
+
+    return port;
+}
+
+/**
+ * @brief Get the port number from the user
+ *
+ * @param argc
+ * @param argv
+ * @return int
+ */
+int process_port(int argc, char *argv[])
+{
+    if (argc != 3)
+    {
+        printf("Usage: %s -p <port>\n", argv[0]);
+        exit(1);
+    }
+
+    int port = validate_port(argv[2]);
+
+    return port;
+}
+
 /**
  * @brief Create the socket
  *
@@ -83,6 +125,43 @@ int create_socket(int port)
     return sd;
 }
 
+/**
+ * @brief Create and connect the socket
+ * 
+ * @param ip 
+ * @param port_str 
+ * @return socket 
+ */
+int create_and_connect_socket(char* ip, char* port_str)
+{
+    int sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sd == -1)
+    {
+        printf("Error creating socket\n");
+        exit(1);
+    }
+
+    struct sockaddr_in server_addr = {0};
+    bzero((char *)&server_addr, sizeof(server_addr));
+
+    int port = validate_port(port_str);
+    server_addr.sin_addr.s_addr = inet_addr(ip);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+
+    if (connect(sd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
+    {
+        printf("Error connecting to the client\n");
+        // print server_addr.sin_port and server_addr.sin_addr.s_addr
+        printf("IP Tuplas: %s\n", ip);
+        printf("Port: %d\n", ntohs(server_addr.sin_port));
+        printf("IP: %s\n", inet_ntoa(server_addr.sin_addr));
+        exit(1);
+    }
+
+    return sd;
+}
+
 char *read_string(int sd)
 {
     char *string = malloc(MAX_LINE);
@@ -118,34 +197,6 @@ void send_string(int sd, char *string)
     }
 }
 
-// Parameters get_parameters(int client_sd, int operation_code) {
-//     int num_parameters = OPERATION_PARAMS[operation_code];
-
-//     Parameters parameters;
-
-//     if(strcmp(OPERATION_NAMES[operation_code], "copy_key") == 0) {
-//         parameters.key1 = read_int(client_sd);
-//         parameters.key2 = read_int(client_sd);
-//     } else {
-//         for (int i = 0; i < num_parameters; i++)
-//         {
-//             switch (i)
-//             {
-//             case 0:
-//                 parameters.key1 = read_int(client_sd);
-//                 break;
-//             case 1:
-//                 readLine(client_sd, parameters.value1, MAX_LINE);
-//                 break;
-//             case 2:
-//                 parameters.value2 = read_int(client_sd);
-//                 break;
-//         }
-//     }
-
-//     return parameters;
-// }
-
 int8_t get_operation_code(char *operation_code_str)
 {
     // * Get the operation code (int)
@@ -169,7 +220,7 @@ int8_t get_operation_code(char *operation_code_str)
 }
 
 /**
- * @brief Send the response to the client
+ * @brief 
  * @param socket (socket descriptor of the client)
  * @param error_code
  */
@@ -220,10 +271,13 @@ void deal_with_request(Request *client_request)
     char client_port_str[6];
     sprintf(client_port_str, "%d", client_port);
 
-    char port[6];
-    char name[256];  // Name of the user: 255 characters + '\0'
-    char alias[256]; // Alias of the user: 255 characters + '\0' <- IDENTIFIER
-    char birth[11];  // Birth of the user: "DD/MM/AAAA" + '\0'
+    // * Parameter declaration
+    char port[6];               // Port of the user: 5 characters + '\0'
+    char name[256];             // Name of the user: 255 characters + '\0'
+    char alias[256];            // Alias of the user: 255 characters + '\0' <- IDENTIFIER
+    char receiver[256];             // Alias of the destination user: 255 characters + '\0'
+    char message[256];          // Message to send: 255 characters + '\0' 
+    char birth[11];             // Birth of the user: "DD/MM/AAAA" + '\0'
 
     uint8_t error_code;
     switch (operation_code_int)
@@ -237,6 +291,14 @@ void deal_with_request(Request *client_request)
             // * Register the user
             error_code = list_register_user(client_IP, client_port_str, name, alias, birth);
             list_display_user_list();
+            
+            // * Print the terminal result
+            if (!error_code) {
+                printf("s> REGISTER %s OK\n", alias);
+            }
+            else {
+                printf("s> REGISTER %s FAIL\n", alias);
+            }
 
             // * Send the error code to the client
             send_error_code(client_sd, error_code);
@@ -252,6 +314,14 @@ void deal_with_request(Request *client_request)
             error_code = list_unregister_user(alias);
             list_display_user_list();
 
+            // * Print the terminal result
+            if (!error_code) {
+                printf("s> UNREGISTER %s OK\n", alias);
+            }
+            else {
+                printf("s> UNREGISTER %s FAIL\n", alias);
+            }
+
             // * Send the error code to the client
             send_error_code(client_sd, error_code);
 
@@ -263,13 +333,24 @@ void deal_with_request(Request *client_request)
             strcpy(alias, read_string(client_sd));
             strcpy(port, read_string(client_sd));
 
-
             // * Connect the user
             error_code = list_connect_user(client_IP, port, alias);
             list_display_user_list();
 
+            // * Print the terminal result
+            if (!error_code) {
+                printf("s> CONNECT %s OK\n", alias);
+            }
+            else {
+                printf("s> CONNECT %s FAIL\n", alias);
+            }
+
             // * Send the error code to the client
             send_error_code(client_sd, error_code);
+
+            // if (error_code == 0) {
+            //     // TODO: Si existen mensajes pendientes para el usuario que se ha conectado se mostrar´a el siguiente mensaje por cada uno de ellos que se env´ıe: s> SEND MESSAGE <id> FROM <userNameS> TO <userNameR>
+            // }
 
             break;
 
@@ -281,6 +362,14 @@ void deal_with_request(Request *client_request)
             // * Disconnect the user
             error_code = list_disconnect_user(client_IP, alias);
             list_display_user_list();
+
+            // * Print the terminal result
+            if (!error_code) {
+                printf("s> DISCONNECT %s OK\n", alias);
+            }
+            else {
+                printf("s> DISCONNECT %s FAIL\n", alias);
+            }
 
             // * Send the error code to the client
             send_error_code(client_sd, error_code);
@@ -295,17 +384,71 @@ void deal_with_request(Request *client_request)
             ConnectedUsers connUsers = list_connected_users(alias);
             list_display_user_list();
 
+            // * Print the terminal result
+            if (!connUsers.error_code) {
+                printf("s> CONNECTEDUSERS OK\n");
+            }
+            else {
+                printf("s> CONNECTEDUSERS FAIL\n");
+            }
+
             // * Send the list of connected users to the client
             send_error_code(client_sd, connUsers.error_code);
 
-            // * Send the number of connected users to the client
-            char connUserSize[7];
-            sprintf(connUserSize, "%u", connUsers.size);
-            send_string(client_sd, connUserSize);
+            // * Send the number of connected users to the client and the list of connected users
+            if (connUsers.error_code == 0) {
+                // * Send the number of connected users to the client
+                char connUserSize[7];
+                sprintf(connUserSize, "%u", connUsers.size);
+                send_string(client_sd, connUserSize);
 
-            // * Send the list of connected users to the client
-            for (unsigned int i = 0; i < connUsers.size; i++) {
-                send_string(client_sd, connUsers.alias[i]);
+                // * Send the list of connected users to the client
+                for (unsigned int i = 0; i < connUsers.size; i++)
+                {
+                    send_string(client_sd, connUsers.alias[i]);
+                }
+            }
+
+            break;
+
+        case SEND:
+            // * Read the parameters
+            strcpy(alias, read_string(client_sd));
+            strcpy(receiver, read_string(client_sd));
+            strcpy(message, read_string(client_sd));
+
+            // * Send the message
+            ReceiverMessage result = list_send_message(alias, receiver, message);
+            
+            // Check if the receiver is connected and all went well
+            if (result.error_code == 0 && result.ip != NULL && result.port != NULL) {
+                // * Send the message to the receiver
+                int receiver_sd = create_and_connect_socket(result.ip, result.port);
+                send_string(receiver_sd, "SEND_MESSAGE");
+                send_string(receiver_sd, alias);
+                char msgId[11];
+                sprintf(msgId, "%u", result.msgId);
+                send_string(receiver_sd, msgId);
+                send_string(receiver_sd, message);
+                close(receiver_sd);
+            }
+
+            list_display_user_list();
+
+            // * Send the error code to the client
+            send_error_code(client_sd, result.error_code);
+
+            // * Send the message ID if everything went well
+            if (result.error_code == 0) {
+                char msgId[11];
+                sprintf(msgId, "%u", result.msgId);
+                send_string(client_sd, msgId);
+
+                if (result.msgId == 0) {
+                    printf("s> MESSAGE %u FROM %s TO %s STORED\n", result.msgId, alias, receiver);
+                } else {
+                    printf("s> SEND MESSAGE %u FROM %s TO %s\n", result.msgId, alias, receiver);
+                }
             }
 
             break;
@@ -315,47 +458,18 @@ void deal_with_request(Request *client_request)
     close(client_sd);
 }
 
-/**
- * @brief Get the port number from the user
- *
- * @param argc
- * @param argv
- * @return int
- */
-int process_port(int argc, char *argv[])
-{
-    char *end;
-
-    if (argc != 3)
-    {
-        printf("Usage: %s -p <port>\n", argv[0]);
-        exit(1);
-    }
-
-    // Now we are sure that the user has only entered the port
-    // -> Let's check if it's an integer and then convert it to int
-    int port = (int)strtol(argv[2], &end, 10);
-
-    if (*end != '\0')
-    {
-        printf("Invalid port number format: %s\n", argv[2]);
-        exit(1);
-    }
-
-    if (port < 1024 || port > 65535)
-    {
-        printf("Invalid port number: %d\n", port);
-        exit(1);
-    }
-
-    return port;
-}
-
 int main(int argc, char *argv[])
 {
     int port = process_port(argc, argv);
     // printf("Port: %d\n", port);
     int sd = create_socket(port);
+
+    // Get server IP
+    struct sockaddr_in server_address;
+    socklen_t server_address_length = sizeof(server_address);
+    getsockname(sd, (struct sockaddr *)&server_address, &server_address_length);
+    char server_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(server_address.sin_addr), server_ip, INET_ADDRSTRLEN);
 
     // Register the signal handler
     signal(SIGINT, stopServer);
@@ -371,6 +485,13 @@ int main(int argc, char *argv[])
     // ! Mutex & Condition variables
     pthread_mutex_init(&mutex, NULL); // Initialize the mutex
     pthread_cond_init(&cond, NULL);   // Initialize the condition variable
+
+
+    // * When initializing the server, we print server information (IP:port)
+    printf("s> init server %s:%d", server_ip, port);
+
+    // * Before receiving any request, we print the prompt
+    printf("s>");
 
     // of messages sent/set of messages received and so we dont have to force break the loop
     while (1)

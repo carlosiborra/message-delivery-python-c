@@ -242,35 +242,48 @@ ConnectedUsers connected_users(UserList *list, char *alias) {
  * 5. Obtain the last message ID of the source user and increment it by 1 (taking into account the wrap-around to 0).
  * 6.a. If the destination user is connected, send the message to the destination user.
  * 6.b. If the destination user is not connected, store the message in the pending messages list of the destination user and local variable <stored> to 1.
+ * @return a ReceiverMessage struct with error_code 0 -> Success, 1 -> Destination user not found, 2 -> Error
  */
-uint8_t send_message(UserList *list, char *sourceAlias, char *destAlias, char *message) {
+ReceiverMessage send_message(UserList *list, char *sourceAlias, char *destAlias, char *message) {
+    ReceiverMessage result;
+    strcpy(result.ip, "");
+    strcpy(result.port, "");
+    result.error_code = 0;
+    result.msgId = 0;
+    
     if (strlen(message) > 255) {
-        return 2;
+        result.error_code = 2;
+        return result;
     }
 
     UserEntry *source_user = search(list, sourceAlias);
     if (source_user == NULL) {
-        return 2;
+        result.error_code = 2;
+        return result;
     }
     if (source_user->status == 0) {
-        return 2;
+        result.error_code = 2;
+        return result;
     }
 
     UserEntry *dest_user = search(list, destAlias);
     if (dest_user == NULL) {
-        return 1;
+        result.error_code = 2;
+        return result;
     }
 
     source_user->messageId = (source_user->messageId + 1) % UINT_MAX;
 
     if (dest_user->status == 1) {
         // Send the message to the destination user
-        // Implement the actual sending function depending on the communication protocol
+        strcpy(result.ip, dest_user->ip);
+        strcpy(result.port, dest_user->port);
+        result.msgId = source_user->messageId;
     } else {
         add_pending_message(dest_user, sourceAlias, source_user->messageId, message);
     }
 
-    return 0;
+    return result;
 }
 
 /**

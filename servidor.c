@@ -213,7 +213,7 @@ ConnectedUsers list_connected_users(char *alias) {
  * @param message char*
  * @return 0 -> Success, 1 -> Destination user not found, 2 -> Error
  */
-uint8_t list_send_message(char *sourceAlias, char *destAlias, char *message) {
+ReceiverMessage list_send_message(char *sourceAlias, char *destAlias, char *message) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -221,12 +221,12 @@ uint8_t list_send_message(char *sourceAlias, char *destAlias, char *message) {
     sem_wait(&writer_sem);
     
     // Send message in the linked list
-    int error_code = send_message(user_list, sourceAlias, destAlias, message);
+    ReceiverMessage result = send_message(user_list, sourceAlias, destAlias, message);
 
     // Writer releases the write semaphore
     sem_post(&writer_sem);
-    
-    return error_code;
+
+    return result;
 }
 
 int list_display_user_list()

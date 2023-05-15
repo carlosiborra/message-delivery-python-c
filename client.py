@@ -154,11 +154,15 @@ class client :
                 C_socket, C_address = sock.accept()
                 print(f"Connection from {C_address} has been established!")
 
-                cadena = C_socket.recv(256).decode()
+                cadena = client.readString(C_socket)
+                print(f"Cadena: {cadena}")
                 if cadena == "SEND_MESSAGE":
-                    sourceAlias = C_socket.recv(256).decode()
-                    messageId = C_socket.recv(256).decode()
-                    message = C_socket.recv(256).decode()
+                    sourceAlias = client.readString(C_socket)
+                    print(f"source alias: {sourceAlias}")
+                    messageId = client.readString(C_socket)
+                    print(f"message id: {messageId}")
+                    message = client.readString(C_socket)
+                    print(f"message: {message}")
                     if not message:
                         break
                     window['_SERVER_'].print(f"s> MESSAGE {messageId} FROM {sourceAlias} \n{message}\nEND")
@@ -268,7 +272,6 @@ class client :
                 window['_SERVER_'].print("s> DISCONNECT OK")
 
                 # Stop listening for messages
-                client._stop_listening = True
                 client._listening_sock.close()
                 client._listening_port = -1
 
@@ -298,10 +301,49 @@ class client :
     # * @return ERROR the user does not exist or another error occurred
     @staticmethod
     def  send(user, message, window):
-        window['_SERVER_'].print("s> SEND MESSAGE OK")
-        print("SEND " + user + " " + message)
-        #  Write your code here
-        return client.RC.ERROR
+        try:
+            sock = client.create_socket_and_connect()
+
+            # Indicate the server that we want to send a message
+            sock.sendall("SEND".encode())
+            sock.sendall(b'\0')
+
+            # Sending the rest of the data: sender alias
+            sock.sendall(client._alias.encode())
+            sock.sendall(b'\0')
+            
+            # Sending the rest of the data: receiver alias
+            sock.sendall(user.encode())
+            sock.sendall(b'\0')
+            
+            # Sending the rest of the data: message
+            sock.sendall(message.encode())
+            sock.sendall(b'\0')
+
+            # Receive the response from the server
+            response = sock.recv(1)
+            
+            print(f"Response: {response}")
+
+            if (response == b'\x00'):
+                
+                # Read the message id
+                messageId = client.readString(sock)
+                sock.close()
+
+                window['_SERVER_'].print(f"s> SEND OK - MESSAGE {messageId}")
+
+                return client.RC.OK
+            elif (response == b'\x01'):
+                window['_SERVER_'].print("s> SEND FAIL / USER DOES NOT EXIST")
+                return client.RC.USER_ERROR
+            else:
+                window['_SERVER_'].print("s> SEND FAIL")
+                return client.RC.ERROR
+
+        except Exception as _:
+            window['_SERVER_'].print("s> SEND FAIL")
+            return client.RC.ERROR
 
     # *
     # * @param user    - Receiver user name
