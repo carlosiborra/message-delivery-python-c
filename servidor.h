@@ -77,6 +77,13 @@ ConnectedUsers list_connected_users(char *alias);
 ReceiverMessage list_send_message(char *sourceAlias, char *destAlias, char *message);
 
 /**
+ * @brief Get connection status of the user with the given alias.
+ *
+ * @return a struct ConnectionStatus with error code 0 -> Success (User connected), 1 -> User not found, 2 -> Error
+ */
+ConnectionStatus list_get_connection_status(char *alias);
+
+/**
  * @brief Display the list.
  * @note This is a WRITER function.
  */

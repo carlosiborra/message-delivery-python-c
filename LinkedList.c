@@ -455,6 +455,35 @@ uint8_t add_pending_message(UserEntry *dest_user, char *sourceAlias, unsigned in
     return 0;
 }
 
+// typedef struct
+// {
+//     char ip[16];        // IP address of the receiver
+//     char port[6];       // Port of the receiver
+//     uint8_t error_code; // Error code: 0 -> Success (User connected), 1 -> User not found, 2 -> Error
+// } ConnectionStatus;
+
+/*
+ * @brief Get connection status of the user with the given alias.
+ *
+ * @return a struct ConnectionStatus with error code 0 -> Success (User connected), 1 -> User not found, 2 -> Error
+ */
+ConnectionStatus get_connection_status(UserList *list, char *alias) {
+    ConnectionStatus result;
+    result.error_code = 0;
+    UserEntry *user = search(list, alias);
+    if (user == NULL) {
+        result.error_code = 1;
+        return result;
+    }
+    if (user->status == 0) {
+        result.error_code = 2;
+        return result;
+    }
+    strncpy(result.ip, user->ip, 16);
+    strncpy(result.port, user->port, 6);
+    return result;
+}
+
 /**
  * @brief Display the list of users.
  */

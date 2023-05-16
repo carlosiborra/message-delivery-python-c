@@ -89,8 +89,6 @@ class client :
             # Close the socket
             sock.close()
             
-            print(f"Response: {response}")
-
             if (response == b'\x00'):
                 window['_SERVER_'].print("s> REGISTER OK")
                 return client.RC.OK
@@ -129,8 +127,6 @@ class client :
             # Close the socket
             sock.close()
             
-            print(f"Response: {response}")
-
             if (response == b'\x00'):
                 window['_SERVER_'].print("s> UNREGISTER OK")
                 return client.RC.OK
@@ -159,14 +155,13 @@ class client :
                 print(f"Cadena: {cadena}")
                 if cadena == "SEND_MESSAGE":
                     sourceAlias = client.readString(C_socket)
-                    print(f"source alias: {sourceAlias}")
+                    messageId = client.readString(C_socket)
+                    message = client.readString(C_socket)
+                    window['_SERVER_'].print(f"s> MESSAGE {messageId} FROM {sourceAlias} \n{message}\nEND")
+                elif cadena == "SEND_MESS_ACK":
                     messageId = client.readString(C_socket)
                     print(f"message id: {messageId}")
-                    message = client.readString(C_socket)
-                    print(f"message: {message}")
-                    if not message:
-                        break
-                    window['_SERVER_'].print(f"s> MESSAGE {messageId} FROM {sourceAlias} \n{message}\nEND")
+                    window['_SERVER_'].print(f"s> SEND MESSAGE {messageId} OK")
 
                 # Close the connection with the client
                 C_socket.close()
@@ -210,8 +205,6 @@ class client :
 
             # Receive the response from the server
             response = sock.recv(1)
-
-            print(f"Response: {response}")
 
             if (response == b'\x00'):
                 print(f"Listening port: {client._listening_port}")
@@ -267,8 +260,6 @@ class client :
             # Close the socket
             sock.close()
             
-            print(f"Response: {response}")
-
             if (response == b'\x00'):
                 window['_SERVER_'].print("s> DISCONNECT OK")
 
@@ -321,19 +312,16 @@ class client :
             wsdl_url = "http://localhost:8000/?wsdl"
             soap = zeep.Client(wsdl=wsdl_url)
             new_message = soap.service.convert_text(message)
-            
             sock.sendall(new_message.encode())
             sock.sendall(b'\0')
+
+            # sock.sendall(message.encode())
+            # sock.sendall(b'\0')
 
             # Receive the response from the server
             response = sock.recv(1)
             
-            print(f"Response: {response}")
-
             if (response == b'\x00'):
-                
-                # TODO: When the other person is disconnected, the message ID is 0 and that has to change
-
                 # Read the message id
                 messageId = client.readString(sock)
                 sock.close()
@@ -384,8 +372,6 @@ class client :
             # Receive the response from the server
             response = sock.recv(1)
             
-            print(f"Response: {response}")
-
             if (response == b'\x00'):
                 # Read the number of connected users and then read as many aliases as connected users are (joining them by commas)
                 numConnUsers = client.readNumber(sock)

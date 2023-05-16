@@ -67,6 +67,13 @@ typedef struct
     uint8_t error_code;             // Error code: 0 -> Success, 1 -> User not found, 2 -> Error
 } ConnectionResult;
 
+typedef struct
+{
+    char ip[16];                    // IP address of the receiver
+    char port[6];                   // Port of the receiver
+    uint8_t error_code;             // Error code: 0 -> Success (User connected), 1 -> User not found, 2 -> Error
+} ConnectionStatus;
+
 /**
  * @brief Search for a user with the given alias in the list.
  * @return NULL if the alias does not exist in the list. Otherwise, return a pointer to the user entry.
@@ -191,6 +198,11 @@ uint8_t delete_message(UserList *list, char *alias, unsigned int num);
  * @return 0 -> Success, 1 -> Destination user not found, 2 -> Error
  */
 uint8_t add_pending_message(UserEntry *dest_user, char *sourceAlias, unsigned int msgId, char *message);
+
+/*
+ * @brief Get connection status of the user with the given alias.
+ */
+ConnectionStatus get_connection_status(UserList *list, char *alias);
 
 /**
  * @brief Display the list of users.

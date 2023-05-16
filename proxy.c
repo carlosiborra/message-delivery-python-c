@@ -359,8 +359,16 @@ void deal_with_request(Request *client_request)
                     close(client_listen_thread);
 
 
-                    // TODO: Inform the sender that the message has been sent
-                    // int sender_sd = create_and_connect_socket(current->ip, current->port);
+                    // * Inform the sender that the message has been sent
+                    ConnectionStatus status = list_get_connection_status(current->sourceAlias);
+                    // If the sender is not connected (status.error_code == 1) or if there occured an error (status.error_code == 2)
+                    // we don't notify the sender. However, if it's connected (status.error_code == 0) we notify the sender
+                    if (status.error_code == 0) {
+                        int sender_sd = create_and_connect_socket(status.ip, status.port);
+                        send_string(sender_sd, "SEND_MESS_ACK");
+                        send_string(sender_sd, msgId);
+                        close(sender_sd);
+                    }
                     previous = current;
                     current = current->next;
 

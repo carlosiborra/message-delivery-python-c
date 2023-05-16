@@ -229,6 +229,53 @@ ReceiverMessage list_send_message(char *sourceAlias, char *destAlias, char *mess
     return result;
 }
 
+ConnectionStatus list_get_connection_status(char *alias) {
+    // Initialize the semaphore if it is not initialized
+    init_sem();
+
+    // Acquire the reader mutex
+    pthread_mutex_lock(&reader_mut);
+
+    // Increment the reader count
+    reader_count++;
+
+    // If it's the first reader, try to get the write semaphore
+    if (reader_count == 1)
+    {
+        if (sem_trywait(&writer_sem) != 0)
+        {
+            pthread_mutex_unlock(&reader_mut);
+            sem_post(&writer_sem);
+            ConnectionStatus connection_status_result;
+            connection_status_result.error_code = 2;
+            return connection_status_result;
+        }
+    }
+
+    // Release the reader mutex
+    pthread_mutex_unlock(&reader_mut);
+
+    // Search for all connected users in the linked list
+    ConnectionStatus connection_status_result = get_connection_status(user_list, alias);
+
+    // Acquire the reader mutex
+    pthread_mutex_lock(&reader_mut);
+
+    // Decrement the reader count
+    reader_count--;
+
+    // If it's the last reader, release the write semaphore
+    if (reader_count == 0)
+    {
+        sem_post(&writer_sem);
+    }
+
+    // Release the reader mutex
+    pthread_mutex_unlock(&reader_mut);
+
+    return connection_status_result;
+}
+
 int list_display_user_list()
 {
     // Initialize the semaphore if it is not initialized
