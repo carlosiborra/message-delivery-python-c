@@ -150,14 +150,7 @@ int create_and_connect_socket(char* ip, char* port_str)
     server_addr.sin_port = htons(port);
 
     if (connect(sd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
-    {
-        printf("Error connecting to the client\n");
-        // print server_addr.sin_port and server_addr.sin_addr.s_addr
-        printf("IP Tuplas: %s\n", ip);
-        printf("Port: %d\n", ntohs(server_addr.sin_port));
-        printf("IP: %s\n", inet_ntoa(server_addr.sin_addr));
-        exit(1);
-    }
+        printf("Error connecting to the client -> IP: %s , Port: %d\n", ip, ntohs(server_addr.sin_port));
 
     return sd;
 }
@@ -334,11 +327,11 @@ void deal_with_request(Request *client_request)
             strcpy(port, read_string(client_sd));
 
             // * Connect the user
-            error_code = list_connect_user(client_IP, port, alias);
+            ConnectionResult conn_result = list_connect_user(client_IP, port, alias);
             list_display_user_list();
 
             // * Print the terminal result
-            if (!error_code) {
+            if (!conn_result.error_code) {
                 printf("s> CONNECT %s OK\n", alias);
             }
             else {
@@ -346,11 +339,38 @@ void deal_with_request(Request *client_request)
             }
 
             // * Send the error code to the client
-            send_error_code(client_sd, error_code);
+            send_error_code(client_sd, conn_result.error_code);
 
-            // if (error_code == 0) {
-            //     // TODO: Si existen mensajes pendientes para el usuario que se ha conectado se mostrar´a el siguiente mensaje por cada uno de ellos que se env´ıe: s> SEND MESSAGE <id> FROM <userNameS> TO <userNameR>
-            // }
+            if (conn_result.error_code == 0 && conn_result.pendingMessages != NULL) {
+                sleep(1);
+
+                // * Send the list of pending messages to the client
+                // MessageEntry *previous = NULL;
+                MessageEntry *current = conn_result.pendingMessages->head;
+                while (current != NULL)
+                {
+                    int client_listen_thread = create_and_connect_socket(client_IP, port);
+                    send_string(client_listen_thread, "SEND_MESSAGE");
+                    send_string(client_listen_thread, current->sourceAlias);
+                    char msgId[11];
+                    sprintf(msgId, "%u", current->msgId);
+                    send_string(client_listen_thread, msgId);
+                    send_string(client_listen_thread, current->message);
+                    close(client_listen_thread);
+
+
+                    // * Inform the sender that the message has been sent
+                    // int sender_sd = create_and_connect_socket(current->ip, current->port);
+                    // previous = current;
+                    current = current->next;
+
+                    // TODO: Review the segmentation fault that is happening here
+                    // * Delete the message from the list
+                    // if (list_delete_message(previous)){
+                    //     printf("s> Error deleting message %u from %s\n", previous->msgId, previous->sourceAlias);
+                    // }
+                }
+            }
 
             break;
 
@@ -419,9 +439,14 @@ void deal_with_request(Request *client_request)
 
             // * Send the message
             ReceiverMessage result = list_send_message(alias, receiver, message);
+
+            // print the error code, ip and port of the result
+            printf("Error code: %d\n", result.error_code);
+            printf("IP: %s\n", result.ip);
+            printf("Port: %s\n", result.port);
             
             // Check if the receiver is connected and all went well
-            if (result.error_code == 0 && result.ip != NULL && result.port != NULL) {
+            if (result.error_code == 0 && strlen(result.ip) > 0 && strlen(result.port) > 0) {
                 // * Send the message to the receiver
                 int receiver_sd = create_and_connect_socket(result.ip, result.port);
                 send_string(receiver_sd, "SEND_MESSAGE");

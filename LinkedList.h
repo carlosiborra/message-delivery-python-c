@@ -60,6 +60,12 @@ typedef struct
     uint8_t error_code;             // Error code: 0 -> Success, 1 -> User not found, 2 -> Error
 } ReceiverMessage;
 
+typedef struct
+{
+    MessageList *pendingMessages;   // List of pending messages
+    uint8_t error_code;             // Error code: 0 -> Success, 1 -> User not found, 2 -> Error
+} ConnectionResult;
+
 /**
  * @brief Search for a user with the given alias in the list.
  * @return NULL if the alias does not exist in the list. Otherwise, return a pointer to the user entry.
@@ -87,14 +93,14 @@ uint8_t register_user(UserList *list, char *ip, char *port, char *name, char *al
 uint8_t unregister_user(UserList *list, char *alias);
 
 /**
- * @brief Connect a user with the given alias. 
+ * @brief Connect a user with the given alias.
  * 1. Search for the user with the given alias in the list. If does not exist, return 1.
  * 2. If the user is already connected, return 2.
  * 3. If the user is not connected and exists, set the status to 1 (connected).
  * 4. Otherwise, return 3.
- * @return 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
+ * @return a struct ConnectionResult with error code 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
  */
-uint8_t connect_user(UserList *list, char* ip, char *port, char *alias);
+ConnectionResult connect_user(UserList *list, char *ip, char *port, char *alias);
 
 /**
  * @brief Disconnect a user with the given alias.

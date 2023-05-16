@@ -160,20 +160,33 @@ uint8_t unregister_user(UserList *list, char *alias) {
  * 2. If the user is already connected, return 2.
  * 3. If the user is not connected and exists, set the status to 1 (connected).
  * 4. Otherwise, return 3.
- * @return 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
+ * @return a struct ConnectionResult with error code 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
  */
-uint8_t connect_user(UserList *list, char* ip, char* port, char* alias) {
+ConnectionResult connect_user(UserList *list, char* ip, char* port, char* alias) {
+    ConnectionResult result;
+    result.error_code = 0;
+    
     UserEntry *user = search(list, alias);
     if (user == NULL) {
-        return 1;
+        result.error_code = 1;
+        return result;
     }
     if (user->status == 1) {
-        return 2;
+        result.error_code = 2;
+        return result;
     }
     strncpy(user->ip, ip, 16);              // Update IP
     strncpy(user->port, port, 6);           // Update port
     user->status = 1;                       // Set status to connected
-    return 0;
+
+    // Check if there are any pending messages
+    if (user->pendingMessages->size > 0) {
+        result.pendingMessages = user->pendingMessages;
+    } else {
+        result.pendingMessages = NULL;
+    }
+
+    return result;
 }
 
 /**

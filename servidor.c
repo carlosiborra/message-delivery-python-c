@@ -110,9 +110,9 @@ uint8_t list_unregister_user(char *alias) {
  * @param ip char*
  * @param port char*
  * @param alias char*
- * @return 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
+ * @return a struct ConnectionResult with error code 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
  */
-uint8_t list_connect_user(char *ip, char *port, char *alias) {
+ConnectionResult list_connect_user(char *ip, char *port, char *alias) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -120,12 +120,12 @@ uint8_t list_connect_user(char *ip, char *port, char *alias) {
     sem_wait(&writer_sem);
     
     // Connect user in the linked list
-    int error_code = connect_user(user_list, ip, port, alias);
+    ConnectionResult result = connect_user(user_list, ip, port, alias);
 
     // Writer releases the write semaphore
     sem_post(&writer_sem);
 
-    return error_code;
+    return result;
 }
 
 
@@ -270,6 +270,22 @@ void request_delete_list()
     }
     delete_user_list(user_list);
     free(user_list);
+}
+
+uint8_t list_delete_message(MessageEntry* message_entry) {
+    // Initialize the semaphore if it is not initialized
+    init_sem();
+
+    // Writer tries to get the write semaphore
+    sem_wait(&writer_sem);
+
+    // Display the linked list
+    uint8_t error_code = delete_message_entry(message_entry);
+
+    // Writer releases the write semaphore
+    sem_post(&writer_sem);
+
+    return error_code;
 }
 
 void print_connected_users(ConnectedUsers connected_users_result) {

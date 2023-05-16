@@ -21,3 +21,6 @@
 
 ## Ejecutar app. servidor:
 > `make proxy && ./servidor -p 8888`
+
+## Ejecutar web service server:
+> `python3 ws-text.py`

@@ -5,6 +5,7 @@ from enum import Enum
 import argparse
 import socket
 import threading
+import zeep
 
 class client :
 
@@ -134,7 +135,7 @@ class client :
                 window['_SERVER_'].print("s> UNREGISTER OK")
                 return client.RC.OK
             elif (response == b'\x01'):
-                window['_SERVER_'].print("s> USERNAME DOES NOT EXIST")
+                window['_SERVER_'].print("s> USER DOES NOT EXIST")
                 return client.RC.USER_ERROR
             else:
                 window['_SERVER_'].print("s> UNREGISTER FAIL")
@@ -226,7 +227,7 @@ class client :
                 return client.RC.OK
             elif (response == b'\x01'):
                 sock.close()
-                window['_SERVER_'].print("s> CONNECT FAIL, USER DOES NOT EXIST")
+                window['_SERVER_'].print("s> CONNECT FAIL / USER DOES NOT EXIST")
                 return client.RC.USER_ERROR
             elif (response == b'\x02'):
                 sock.close()
@@ -274,7 +275,6 @@ class client :
                 # Stop listening for messages
                 client._listening_sock.close()
                 client._listening_port = -1
-
                 return client.RC.OK
             elif (response == b'\x01'):
                 window['_SERVER_'].print("s> DISCONNECT FAIL / USER DOES NOT EXIST")
@@ -315,8 +315,13 @@ class client :
             # Sending the rest of the data: receiver alias
             sock.sendall(user.encode())
             sock.sendall(b'\0')
+
+            # Sending the rest of the data: message   
+            # Call to the text web service
+            # wsdl_url = "http://localhost:8000/?wsdl"
+            # soap = zeep.Client(wsdl=wsdl_url)
+            # new_message = soap.service.text(message)
             
-            # Sending the rest of the data: message
             sock.sendall(message.encode())
             sock.sendall(b'\0')
 

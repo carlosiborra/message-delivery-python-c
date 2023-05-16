@@ -48,9 +48,9 @@ uint8_t list_unregister_user(char *alias);
  * @param ip char*
  * @param port char*
  * @param alias char*
- * @return 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
+ * @return a struct ConnectionResult with error code 0 -> Success, 1 -> User not found, 2 -> User already connected, 3 -> Error
  */
-uint8_t list_connect_user(char *ip, char *port, char *alias);
+ConnectionResult list_connect_user(char *ip, char *port, char *alias);
 
 /**
  * @brief Disconnect a user with the given alias.
@@ -93,5 +93,13 @@ int list_display_pending_messages_list(char* alias);
  * @note This is a WRITER function.
  */
 void request_delete_list();
+
+/**
+ * @brief Delete a message from the list with the given pointer.
+ * 
+ * @param message_entry MessageEntry*
+ * @return error code 0 -> Success, 1 -> Error 
+ */
+uint8_t list_delete_message(MessageEntry *message_entry);
 
 #endif
