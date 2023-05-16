@@ -1,5 +1,3 @@
-
-
 #ifndef LINES_H
 #define LINES_H
 

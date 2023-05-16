@@ -26,6 +26,9 @@ class client :
     _date = None
     _listening_sock = None
     _listening_port = -1
+    
+    # Web service client attribute
+    _web_host = "localhost:8000"
 
     # ******************** METHODS *******************
 
@@ -309,9 +312,10 @@ class client :
 
             # Sending the rest of the data: message   
             # Call to the text web service
-            wsdl_url = "http://localhost:8000/?wsdl"
+            wsdl_url = f"http://{client._web_host}/?wsdl"
             soap = zeep.Client(wsdl=wsdl_url)
             new_message = soap.service.convert_text(message)
+            new_message = new_message[:255]
             sock.sendall(new_message.encode())
             sock.sendall(b'\0')
 

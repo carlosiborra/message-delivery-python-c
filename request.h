@@ -26,13 +26,3 @@ typedef struct
     int socket; // Socket descriptor
     char operation[256]; // Operation to be performed
 } Request;
-
-// Structure of the parameters
-typedef struct
-{
-    int key1;            // 4 bytes
-    int key2;            // 4 bytes
-    char value1[256];    // 255 chars + '\0', it will be tested if strlen(value1) > 256
-    int value2;          // 4 bytes
-    double value3;       // 8 bytes
-} Parameters;
