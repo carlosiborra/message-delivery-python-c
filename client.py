@@ -318,11 +318,12 @@ class client :
 
             # Sending the rest of the data: message   
             # Call to the text web service
-            # wsdl_url = "http://localhost:8000/?wsdl"
-            # soap = zeep.Client(wsdl=wsdl_url)
-            # new_message = soap.service.text(message)
+            wsdl_url = "http://localhost:8000/?wsdl"
+            soap = zeep.Client(wsdl=wsdl_url)
+            new_message = soap.service.convert_text(message)
+            print(new_message)
             
-            sock.sendall(message.encode())
+            sock.sendall(new_message.encode())
             sock.sendall(b'\0')
 
             # Receive the response from the server
