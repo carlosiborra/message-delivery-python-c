@@ -283,7 +283,7 @@ void deal_with_request(Request *client_request)
 
             // * Register the user
             error_code = list_register_user(client_IP, client_port_str, name, alias, birth);
-            list_display_user_list();
+            // list_display_user_list();
             
             // * Print the terminal result
             if (!error_code) {
@@ -305,7 +305,7 @@ void deal_with_request(Request *client_request)
             
             // * Unregister the user
             error_code = list_unregister_user(alias);
-            list_display_user_list();
+            // list_display_user_list();
 
             // * Print the terminal result
             if (!error_code) {
@@ -328,7 +328,7 @@ void deal_with_request(Request *client_request)
 
             // * Connect the user
             ConnectionResult conn_result = list_connect_user(client_IP, port, alias);
-            list_display_user_list();
+            // list_display_user_list();
 
             // * Print the terminal result
             if (!conn_result.error_code) {
@@ -345,7 +345,7 @@ void deal_with_request(Request *client_request)
                 sleep(1);
 
                 // * Send the list of pending messages to the client
-                // MessageEntry *previous = NULL;
+                MessageEntry *previous = NULL;
                 MessageEntry *current = conn_result.pendingMessages->head;
                 while (current != NULL)
                 {
@@ -359,16 +359,15 @@ void deal_with_request(Request *client_request)
                     close(client_listen_thread);
 
 
-                    // * Inform the sender that the message has been sent
+                    // TODO: Inform the sender that the message has been sent
                     // int sender_sd = create_and_connect_socket(current->ip, current->port);
-                    // previous = current;
+                    previous = current;
                     current = current->next;
 
-                    // TODO: Review the segmentation fault that is happening here
                     // * Delete the message from the list
-                    // if (list_delete_message(previous)){
-                    //     printf("s> Error deleting message %u from %s\n", previous->msgId, previous->sourceAlias);
-                    // }
+                    if (list_delete_message(alias, previous->num)){
+                        printf("s> Error deleting message %u from %s\n", previous->msgId, previous->sourceAlias);
+                    }
                 }
             }
 
@@ -381,7 +380,7 @@ void deal_with_request(Request *client_request)
 
             // * Disconnect the user
             error_code = list_disconnect_user(client_IP, alias);
-            list_display_user_list();
+            // list_display_user_list();
 
             // * Print the terminal result
             if (!error_code) {
@@ -402,7 +401,7 @@ void deal_with_request(Request *client_request)
  
             // * Get the list of connected users
             ConnectedUsers connUsers = list_connected_users(alias);
-            list_display_user_list();
+            // list_display_user_list();
 
             // * Print the terminal result
             if (!connUsers.error_code) {
@@ -439,11 +438,6 @@ void deal_with_request(Request *client_request)
 
             // * Send the message
             ReceiverMessage result = list_send_message(alias, receiver, message);
-
-            // print the error code, ip and port of the result
-            printf("Error code: %d\n", result.error_code);
-            printf("IP: %s\n", result.ip);
-            printf("Port: %s\n", result.port);
             
             // Check if the receiver is connected and all went well
             if (result.error_code == 0 && strlen(result.ip) > 0 && strlen(result.port) > 0) {
@@ -458,7 +452,7 @@ void deal_with_request(Request *client_request)
                 close(receiver_sd);
             }
 
-            list_display_user_list();
+            // list_display_user_list();
 
             // * Send the error code to the client
             send_error_code(client_sd, result.error_code);
@@ -469,7 +463,7 @@ void deal_with_request(Request *client_request)
                 sprintf(msgId, "%u", result.msgId);
                 send_string(client_sd, msgId);
 
-                if (result.msgId == 0) {
+                if (result.stored == 1) {
                     printf("s> MESSAGE %u FROM %s TO %s STORED\n", result.msgId, alias, receiver);
                 } else {
                     printf("s> SEND MESSAGE %u FROM %s TO %s\n", result.msgId, alias, receiver);

@@ -1,5 +1,4 @@
-import time
-from spyne import Application, ServiceBase, Unicode, rpc
+from spyne import Application, ServiceBase, rpc
 from spyne.protocol.soap import Soap11
 from spyne.server.wsgi import WsgiApplication
 

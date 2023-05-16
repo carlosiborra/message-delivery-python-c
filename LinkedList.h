@@ -57,6 +57,7 @@ typedef struct
     char ip[16];                    // IP address of the receiver
     char port[6];                   // Port of the receiver
     unsigned int msgId;             // Message ID sent by the sending user
+    uint8_t stored;                 // 0 -> Message not stored, 1 -> Message stored
     uint8_t error_code;             // Error code: 0 -> Success, 1 -> User not found, 2 -> Error
 } ReceiverMessage;
 
@@ -176,6 +177,11 @@ uint8_t delete_pending_messages(UserList *list, char *alias);
  * @brief Delete the message list.
  */
 void delete_pending_message_list(MessageList *list);
+
+/**
+ * @brief Delete message from user's pending messages list.
+ */
+uint8_t delete_message(UserList *list, char *alias, unsigned int num);
 
 /**
  * @brief Create a new message in the list with the given parameters.

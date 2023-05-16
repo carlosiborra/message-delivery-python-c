@@ -95,11 +95,12 @@ int list_display_pending_messages_list(char* alias);
 void request_delete_list();
 
 /**
- * @brief Delete a message from the list with the given pointer.
+ * @brief Delete a message from the user list with the given alias and number.
  * 
- * @param message_entry MessageEntry*
+ * @param alias char*
+ * @param num unsigned int
  * @return error code 0 -> Success, 1 -> Error 
  */
-uint8_t list_delete_message(MessageEntry *message_entry);
+uint8_t list_delete_message(char *alias, unsigned int num);
 
 #endif

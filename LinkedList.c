@@ -263,6 +263,7 @@ ReceiverMessage send_message(UserList *list, char *sourceAlias, char *destAlias,
     strcpy(result.port, "");
     result.error_code = 0;
     result.msgId = 0;
+    result.stored = 0;
     
     if (strlen(message) > 255) {
         result.error_code = 2;
@@ -291,10 +292,12 @@ ReceiverMessage send_message(UserList *list, char *sourceAlias, char *destAlias,
         // Send the message to the destination user
         strcpy(result.ip, dest_user->ip);
         strcpy(result.port, dest_user->port);
-        result.msgId = source_user->messageId;
     } else {
         add_pending_message(dest_user, sourceAlias, source_user->messageId, message);
+        result.stored = 1;
     }
+
+    result.msgId = source_user->messageId;
 
     return result;
 }
@@ -383,6 +386,38 @@ void delete_pending_message_list(MessageList *list) {
     }
     list->head = NULL;
     list->size = 0;
+}
+
+/**
+ * @brief Delete message from user's pending messages list.
+ */
+uint8_t delete_message(UserList *list, char *alias, unsigned int num) {
+    UserEntry *user = search(list, alias);
+    if (user == NULL) {
+        return 1;
+    }
+
+    MessageEntry *previous = NULL;
+    MessageEntry *current = user->pendingMessages->head;
+
+    while (current != NULL) {
+        if (current->num == num) {
+            // Delete the message from the list
+            if (previous == NULL) {
+                user->pendingMessages->head = current->next;
+            } else {
+                previous->next = current->next;
+            }
+
+            user->pendingMessages->size--;
+            delete_message_entry(current);
+            return 0;
+        }
+        previous = current;
+        current = current->next;
+    }
+
+    return 1;
 }
 
 /**

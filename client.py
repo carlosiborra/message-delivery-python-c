@@ -173,10 +173,10 @@ class client :
 
             except Exception as _:
                 sock.close()
+                return
 
         # Close the listening socket
         sock.close()
-
 
     # *
     # * @param user - User name to connect to the system
@@ -321,7 +321,6 @@ class client :
             wsdl_url = "http://localhost:8000/?wsdl"
             soap = zeep.Client(wsdl=wsdl_url)
             new_message = soap.service.convert_text(message)
-            print(new_message)
             
             sock.sendall(new_message.encode())
             sock.sendall(b'\0')
@@ -333,6 +332,8 @@ class client :
 
             if (response == b'\x00'):
                 
+                # TODO: When the other person is disconnected, the message ID is 0 and that has to change
+
                 # Read the message id
                 messageId = client.readString(sock)
                 sock.close()

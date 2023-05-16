@@ -272,7 +272,7 @@ void request_delete_list()
     free(user_list);
 }
 
-uint8_t list_delete_message(MessageEntry* message_entry) {
+uint8_t list_delete_message(char* alias, unsigned int num) {
     // Initialize the semaphore if it is not initialized
     init_sem();
 
@@ -280,7 +280,7 @@ uint8_t list_delete_message(MessageEntry* message_entry) {
     sem_wait(&writer_sem);
 
     // Display the linked list
-    uint8_t error_code = delete_message_entry(message_entry);
+    uint8_t error_code = delete_message(user_list, alias, num);
 
     // Writer releases the write semaphore
     sem_post(&writer_sem);
